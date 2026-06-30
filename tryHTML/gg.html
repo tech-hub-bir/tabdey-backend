@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Add Food Menu Item</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 2rem;
+      }
+      form {
+        max-width: 720px;
+        display: grid;
+        gap: 12px;
+      }
+      fieldset {
+        border: 1px solid #ddd;
+        padding: 12px;
+        border-radius: 8px;
+      }
+      legend {
+        padding: 0 0.5rem;
+        color: #444;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+      }
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        width: 100%;
+      }
+      input[type="file"] {
+        padding: 6px 0;
+      }
+      button {
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: #0d6efd;
+        color: #fff;
+        cursor: pointer;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .help {
+        color: #666;
+        font-size: 12px;
+      }
+      .ok {
+        color: #0a7a28;
+      }
+      .err {
+        color: #b00020;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Add Food Menu Item</h1>
+
+    <!--
+    Posts to your food service:
+    Server side expects:
+      - route: POST /api/food-menu (external via ingress: /food/api/food-menu)
+      - image field name: "item_image" (multer .single('item_image'))
+  -->
+    <form
+      id="menuForm"
+      method="post"
+      action="https://grab.newedge.bt/food/api/food-menu"
+      enctype="multipart/form-data"
+    >
+      <fieldset>
+        <legend>Basics</legend>
+        <div class="row">
+          <label>
+            Business ID
+            <input
+              type="number"
+              name="business_id"
+              value="29"
+              min="1"
+              required
+            />
+          </label>
+          <label>
+            Category Name
+            <input type="text" name="category_name" value="Fish" required />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Item Name
+            <input
+              type="text"
+              name="item_name"
+              value="Chicken Dum Biryani"
+              required
+            />
+          </label>
+          <label>
+            Spice Level
+            <select name="spice_level">
+              <option>Low</option>
+              <option selected>Medium</option>
+              <option>High</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Description
+          <textarea
+            name="description"
+            rows="3"
+            placeholder="Write a short description…"
+          >
+Aromatic basmati rice slow-cooked with chicken and spices.</textarea
+          >
+        </label>
+        <label>
+          Item Image
+          <input type="file" name="item_image" accept="image/*" required />
+          <span class="help"
+            >Accepted: png, jpg/jpeg, webp, gif, svg. Max 5 MB.</span
+          >
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pricing & Stock</legend>
+        <div class="row">
+          <label>
+            Actual Price
+            <input
+              type="number"
+              name="actual_price"
+              value="280"
+              min="0"
+              step="0.01"
+              required
+            />
+          </label>
+          <label>
+            Discount (%)
+            <input
+              type="number"
+              name="discount_percentage"
+              value="10"
+              min="0"
+              max="100"
+              step="0.01"
+            />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Tax Rate (%)
+            <input
+              type="number"
+              name="tax_rate"
+              value="5"
+              min="0"
+              max="100"
+              step="0.01"
+            />
+          </label>
+          <label>
+            Stock Limit
+            <input
+              type="number"
+              name="stock_limit"
+              value="50"
+              min="0"
+              step="1"
+            />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Is Veg?
+            <select name="is_veg">
+              <option value="1">Yes</option>
+              <option value="0" selected>No</option>
+            </select>
+          </label>
+          <label>
+            Is Available?
+            <select name="is_available">
+              <option value="1" selected>Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Sort Order
+          <input type="number" name="sort_order" value="1" min="0" step="1" />
+        </label>
+      </fieldset>
+
+      <div class="row">
+        <button type="submit">Save Item</button>
+        <button type="reset" style="background: #6c757d">Reset</button>
+      </div>
+
+      <p id="status" class="help"></p>
+    </form>
+
+    <script>
+      // Optional: submit with fetch to show a friendly status message
+      const form = document.getElementById("menuForm");
+      const statusEl = document.getElementById("status");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        statusEl.textContent = "Uploading…";
+        statusEl.className = "help";
+
+        try {
+          const data = new FormData(form);
+          // Ensure numeric fields are actually numbers (some backends care)
+          [
+            "business_id",
+            "actual_price",
+            "discount_percentage",
+            "tax_rate",
+            "is_veg",
+            "is_available",
+            "stock_limit",
+            "sort_order",
+          ].forEach((k) => {
+            if (data.has(k)) data.set(k, String(data.get(k)).trim());
+          });
+
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: data,
+          });
+
+          const text = await res.text();
+          if (res.ok) {
+            statusEl.textContent = "✅ Saved! Response: " + text;
+            statusEl.className = "ok";
+            form.reset();
+            // restore defaults after reset
+            form.business_id.value = 29;
+            form.category_name.value = "Fish";
+            form.item_name.value = "Chicken Dum Biryani";
+            form.description.value =
+              "Aromatic basmati rice slow-cooked with chicken and spices.";
+            form.actual_price.value = 280;
+            form.discount_percentage.value = 10;
+            form.tax_rate.value = 5;
+            form.is_veg.value = 0;
+            form.spice_level.value = "Medium";
+            form.is_available.value = 1;
+            form.stock_limit.value = 50;
+            form.sort_order.value = 1;
+          } else {
+            statusEl.textContent = "❌ Error " + res.status + ": " + text;
+            statusEl.className = "err";
+          }
+        } catch (err) {
+          statusEl.textContent =
+            "❌ " + (err && err.message ? err.message : err);
+          statusEl.className = "err";
+        }
+      });
+    </script>
+  </body>
+</html>

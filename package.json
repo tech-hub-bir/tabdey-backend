@@ -1,0 +1,61 @@
+{
+  "name": "new-edge",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "driver",
+    "map_and_location_services",
+    "ride_management",
+    "admin",
+    "merchant",
+    "food",
+    "mart",
+    "order_management"
+  ],
+  "scripts": {
+    "start:driver": "npm -w driver run dev",
+    "start:location": "npm -w map_and_location_services run dev",
+    "start:ride": "npm -w ride_management run dev",
+    "start:admin": "npm -w admin run dev",
+    "start:merchant": "npm -w merchant run dev",
+    "start:food": "npm -w food run dev",
+    "start:mart": "npm -w mart run dev",
+    "start:order_management": "npm -w order_management run dev",
+    "start:all": "concurrently -k --names \"driver,location,ride,admin,merchant,food,mart\" -c \"cyan,magenta,green,yellow,blue,white,gray\" \"npm -w driver run dev\" \"npm -w map_and_location_services run dev\" \"npm -w ride_management run dev\" \"npm -w admin run dev\" \"npm -w merchant run dev\" \"npm -w food run dev\" \"npm -w mart run dev\" \"npm -w order_management run dev\""
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "concurrently": "^9.2.0",
+    "prisma": "^7.7.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-mariadb": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "expo-server-sdk": "^6.1.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.4.1",
+    "file-type": "^22.0.1",
+    "heic-convert": "^2.1.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.11.0",
+    "moment-timezone": "^0.6.0",
+    "multer": "^2.1.1",
+    "mysql2": "^3.22.4",
+    "node-fetch": "^3.3.2",
+    "on-finished": "^2.4.1",
+    "redis": "^5.12.1",
+    "sharp": "^0.34.5",
+    "socket.io": "^4.8.3",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

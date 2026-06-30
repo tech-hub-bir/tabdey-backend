@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Ride Types Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e2e8f0;
+    --green:#22c55e; --blue:#3b82f6; --red:#ef4444; --border:#1f2937;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(140deg,#0b1022,#0f172a 40%,#0b1022);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
+  .wrap{max-width:1200px;margin:28px auto;padding:0 16px}
+  h1{font-size:22px;margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:420px 1fr; gap:16px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 10px 35px rgba(0,0,0,.25)}
+  .muted{color:var(--muted);font-size:13px;margin-bottom:12px}
+  label{display:block;margin:10px 0 6px;font-size:13px;color:#cbd5e1}
+  input[type="text"],input[type="number"],textarea{
+    width:100%;background:#0b1222;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;outline:none
+  }
+  input[type="file"]{color:var(--muted)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{cursor:pointer;border:0;border-radius:12px;padding:10px 14px;color:#fff;font-weight:600;transition:transform .05s ease}
+  .btn:active{transform:translateY(1px)}
+  .btn-green{background:var(--green)}
+  .btn-blue{background:var(--blue)}
+  .btn-gray{background:#334155}
+  .btn-red{background:var(--red)}
+  .preview{margin-top:8px;display:flex;align-items:center;gap:10px}
+  .preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .item{background:#0b1222;border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:flex-start}
+  .item img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .grow{flex:1}
+  .title{font-weight:700;margin-bottom:4px}
+  .sub{font-size:12px;color:#9ca3af}
+  .toast{position:fixed;right:16px;bottom:16px;background:#0b1222;border:1px solid var(--border);padding:12px 14px;border-radius:12px;display:none;max-width:80vw}
+  .toast.error{border-color:rgba(239,68,68,.6);color:#fecaca}
+  .sep{height:1px;background:var(--border);margin:12px 0}
+  small.hint{color:#9ca3af}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ride Types Admin</h1>
+    <div class="grid">
+      <!-- LEFT: Create / Edit Form -->
+      <div class="card">
+        <div class="muted">Create new ride types or click “Edit” on the right to modify an existing one. If you don’t choose a new image during edit, the old one is kept.</div>
+
+        <form id="rtForm">
+          <input type="hidden" id="mode" value="create" />
+          <input type="hidden" id="editId" />
+
+          <label for="name">Name *</label>
+          <input id="name" name="name" type="text" required placeholder="e.g. Sedan" />
+
+          <div class="row">
+            <div style="flex:1">
+              <label for="base_fare">Base Fare *</label>
+              <input id="base_fare" name="base_fare" type="number" min="0" required placeholder="e.g. 100" />
+            </div>
+            <div style="flex:1">
+              <label for="per_km">Per Km *</label>
+              <input id="per_km" name="per_km" type="number" min="0" required placeholder="e.g. 15" />
+            </div>
+            <div style="flex:1">
+              <label for="per_min">Per Min *</label>
+              <input id="per_min" name="per_min" type="number" min="0" required placeholder="e.g. 2" />
+            </div>
+          </div>
+
+          <label for="image">Image (optional)</label>
+          <input id="image" name="image" type="file" accept="image/*" />
+
+          <div class="preview" id="imgPreview" style="display:none;">
+            <img alt="preview" />
+            <span class="muted">Selected image</span>
+          </div>
+
+          <div id="currentImageBox" class="preview" style="display:none;">
+            <img id="currentImage" alt="current" />
+            <span class="muted">Current image</span>
+          </div>
+
+          <div class="sep"></div>
+          <div class="row">
+            <button class="btn btn-green" type="submit" id="submitBtn">Create</button>
+            <button class="btn btn-gray" type="button" id="resetBtn">Reset</button>
+            <button class="btn btn-blue" type="button" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
+          </div>
+          <small class="hint">API: POST/PUT <code>/api/ridetypes</code> (field <b>image</b>)</small>
+        </form>
+      </div>
+
+      <!-- RIGHT: List -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div class="muted">All ride types</div>
+          <button class="btn btn-gray" id="refreshBtn">Refresh</button>
+        </div>
+        <div id="list" class="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+  const API_BASE = 'http://localhost:7000/api/ridetypes';
+  const ORIGIN_BASE = 'http://localhost:7000';
+  const FIXED_ADMIN_NAME = 'Keshar Bhujel';
+  const FIXED_USER_ID = 1;
+
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, opts={}) => Object.assign(document.createElement(tag), opts);
+
+  const toast = (msg, isError=false) => {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('error', !!isError);
+    t.style.display = 'block';
+    clearTimeout(t._t);
+    t._t = setTimeout(()=> t.style.display='none', 3500);
+  };
+
+  const PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAQElEQVRoge3OMQEAAAgDINc/9E0wSGsZ2L0oU8kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID7g6wAAX8xC5oAAAAASUVORK5CYII=';
+
+  const toFullImageURL = (p) => {
+    if (!p) return PLACEHOLDER;
+    if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')) return p;
+    return `${ORIGIN_BASE}${p}`;
+  };
+
+  function setMode(mode='create', ride=null) {
+    $('#mode').value = mode;
+    $('#submitBtn').textContent = mode === 'create' ? 'Create' : 'Update';
+    $('#cancelEditBtn').style.display = mode === 'edit' ? 'inline-block' : 'none';
+    $('#currentImageBox').style.display = (mode === 'edit' && ride?.image) ? 'flex' : 'none';
+    if (mode === 'create') {
+      $('#editId').value = '';
+      $('#rtForm').reset();
+      $('#imgPreview').style.display = 'none';
+      $('#currentImage').src = '';
+    } else if (ride) {
+      $('#editId').value = ride.ride_type_id;
+      $('#name').value = ride.name || '';
+      $('#base_fare').value = ride.base_fare ?? '';
+      $('#per_km').value = ride.per_km ?? '';
+      $('#per_min').value = ride.per_min ?? '';
+      $('#image').value = '';
+      $('#imgPreview').style.display = 'none';
+      $('#currentImage').src = toFullImageURL(ride.image);
+    }
+  }
+
+  async function fetchAll() {
+    const res = await fetch(`${API_BASE}/getall`);
+    const data = await res.json().catch(()=>[]);
+    renderList(Array.isArray(data) ? data : []);
+  }
+
+  function renderList(items) {
+    const grid = $('#list');
+    grid.innerHTML = '';
+    if (!items.length) {
+      grid.append(el('div', {className:'muted', textContent:'No ride types yet.'}));
+      return;
+    }
+    items.forEach(item => {
+      const card = el('div', {className:'item'});
+      const img = el('img', {src: toFullImageURL(item.image)});
+      const info = el('div', {className:'grow'});
+      const title = el('div', {className:'title', textContent:item.name || '(no name)'});
+      const sub = el('div', {className:'sub', innerHTML:`Base: <b>${item.base_fare}</b> · Per km: <b>${item.per_km}</b> · Per min: <b>${item.per_min}</b>`});
+      info.append(title, sub);
+      const actions = el('div', {style:'display:flex;gap:8px;flex-wrap:wrap'});
+      const btnEdit = el('button', {className:'btn btn-blue', textContent:'Edit'});
+      const btnDel  = el('button', {className:'btn btn-red',  textContent:'Delete'});
+      btnEdit.onclick = () => setMode('edit', item);
+      btnDel.onclick = () => doDelete(item.ride_type_id);
+      actions.append(btnEdit, btnDel);
+      card.append(img, info, actions);
+      grid.append(card);
+    });
+  }
+
+  async function doCreate(form) {
+    const fd = new FormData();
+    fd.append('name', $('#name').value.trim());
+    fd.append('base_fare', $('#base_fare').value);
+    fd.append('per_km', $('#per_km').value);
+    fd.append('per_min', $('#per_min').value);
+    fd.append('admin_name', FIXED_ADMIN_NAME);
+    fd.append('user_id', FIXED_USER_ID);
+    const file = $('#image').files[0];
+    if (file) fd.append('image', file);
+    const res = await fetch(`${API_BASE}/`, { method:'POST', body: fd });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(data.message || data.error || 'Create failed');
+    toast('Created');
+    form.reset();
+    $('#imgPreview').style.display = 'none';
+    await fetchAll();
+  }
+
+  async function doUpdate(form, id, currentImagePath) {
+    const fd = new FormData();
+    fd.append('name', $('#name').value.trim());
+    fd.append('base_fare', $('#base_fare').value);
+    fd.append('per_km', $('#per_km').value);
+    fd.append('per_min', $('#per_min').value);
+    fd.append('admin_name', FIXED_ADMIN_NAME);
+    fd.append('user_id', FIXED_USER_ID);
+    const file = $('#image').files[0];
+    if (file) {
+      fd.append('image', file);
+    } else if (currentImagePath) {
+      fd.append('image', currentImagePath);
+    }
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method:'PUT', body: fd });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(data.message || data.error || 'Update failed');
+    toast('Updated');
+    setMode('create');
+    await fetchAll();
+  }
+
+  async function doDelete(id) {
+    if (!confirm('Delete this ride type?')) return;
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method:'DELETE' });
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) {
+      toast(data.message || data.error || 'Delete failed', true);
+      return;
+    }
+    toast('Deleted');
+    await fetchAll();
+  }
+
+  $('#image').addEventListener('change', () => {
+    const f = $('#image').files[0];
+    if (f) {
+      $('#imgPreview img').src = URL.createObjectURL(f);
+      $('#imgPreview').style.display = 'flex';
+    } else {
+      $('#imgPreview').style.display = 'none';
+    }
+  });
+
+  $('#rtForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mode = $('#mode').value;
+    const id = $('#editId').value;
+    const currentImgSrc = $('#currentImage').src;
+    const currentPath = currentImgSrc.startsWith('http') ? currentImgSrc.replace(ORIGIN_BASE, '') : currentImgSrc;
+    try {
+      if (mode === 'create') {
+        await doCreate(e.target);
+      } else {
+        await doUpdate(e.target, id, $('#currentImageBox').style.display === 'flex' ? currentPath : null);
+      }
+    } catch (err) {
+      toast(err.message || 'Action failed', true);
+    }
+  });
+
+  $('#resetBtn').addEventListener('click', () => {
+    $('#rtForm').reset();
+    $('#imgPreview').style.display = 'none';
+  });
+
+  $('#cancelEditBtn').addEventListener('click', () => setMode('create'));
+  $('#refreshBtn').addEventListener('click', fetchAll);
+
+  setMode('create');
+  fetchAll();
+</script>
+</body>
+</html>

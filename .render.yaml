@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: new-edge-all-services
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start:all
+    envVars:
+      - key: NODE_VERSION
+        value: 18

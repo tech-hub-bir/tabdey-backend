@@ -1,0 +1,29 @@
+# deps
+node_modules/
+
+# env (ignore all .env anywhere)
+.env
+.env.*
+**/.env
+**/.env.*
+tryHTML/
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+logs/
+*.log
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+/generated/prisma
+
+
+
+# Ignore uploaded runtime files
+**/uploads/

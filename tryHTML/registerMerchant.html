@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Merchant Registration – Photos (One Page)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --bg:#0b1220; --card:#121a2b; --muted:#8aa0c6; --text:#e9f0ff; --accent:#31c48d; --danger:#ff7171; }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0e1530);color:var(--text)}
+    .container{max-width:980px;margin:40px auto;padding:0 18px}
+    h1{margin:0 0 20px}
+    .card{background:var(--card);border:1px solid #1e2a44;border-radius:16px;padding:18px 18px 22px;margin:16px 0;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin-top:0;font-size:18px;color:#cfe1ff}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .grid .full{grid-column:1/-1}
+    label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+    input[type="text"],input[type="email"],input[type="password"],input[type="number"],select{
+      background:#0b1220;border:1px solid #203052;color:var(--text);padding:10px;border-radius:10px
+    }
+    .uploader input[type="file"]{display:block;margin-top:6px}
+    .preview{display:block;width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px dashed #2b3e65;margin-top:8px;background:#0b1220}
+    .actions{display:flex;align-items:center;gap:12px;margin-top:14px}
+    button{background:var(--accent);border:none;color:#0b1220;font-weight:600;padding:10px 16px;border-radius:10px;cursor:pointer}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+    #status{font-size:14px;color:var(--muted)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .row input[type="text"]{width:260px}
+    code{color:#b7d0ff}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:600px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Finish Registration: Add Photos</h1>
+
+    <!-- API Base switch -->
+    <div class="card">
+      <div class="row">
+        <label><span>API Base</span><input id="api_base" type="text" value="http://localhost:6000"></label>
+        <button id="save_api">Use API Base</button>
+        <small id="api_note">POST → <code id="api_preview">http://localhost:6000/api/merchant/register</code></small>
+        <button id="regen">Regenerate Dummy Data</button>
+      </div>
+    </div>
+
+    <!-- Editable fields with dummy defaults -->
+    <section class="card">
+      <h2>Account, Business & Bank (editable)</h2>
+      <div class="grid">
+        <!-- users -->
+        <label><span>User Name</span><input id="user_name" type="text" required></label>
+        <label><span>Email</span><input id="email" type="email" required></label>
+        <label><span>Phone</span><input id="phone" type="text" required></label>
+        <label><span>Password</span><input id="password" type="password" required></label>
+
+        <!-- business -->
+        <label><span>Business Name</span><input id="business_name" type="text" required></label>
+        <label><span>Business Type</span><input id="business_type" type="text" required></label>
+        <label><span>License No. (optional)</span><input id="business_license_number" type="text"></label>
+
+        <label><span>Latitude</span><input id="latitude" type="number" step="0.000001"></label>
+        <label><span>Longitude</span><input id="longitude" type="number" step="0.000001"></label>
+        <label class="full"><span>Address</span><input id="address" type="text"></label>
+
+        <label><span>Delivery Option</span>
+          <select id="delivery_option">
+            <option value="SELF">SELF</option>
+            <option value="GRAB">GRAB</option>
+            <option value="BOTH">BOTH</option>
+          </select>
+        </label>
+
+        <!-- bank -->
+        <label><span>Bank Name</span><input id="bank_name" type="text" required></label>
+        <label><span>Account Holder</span><input id="account_holder_name" type="text" required></label>
+        <label><span>Account Number</span><input id="account_number" type="text" required></label>
+      </div>
+    </section>
+
+    <!-- Photo upload -->
+    <form id="uploadForm" class="card">
+      <h2>Upload Photos</h2>
+
+      <div class="grid">
+        <div class="uploader">
+          <label>Business Logo
+            <input type="file" id="business_logo" name="business_logo" accept="image/*">
+          </label>
+          <img id="preview_business_logo" class="preview" alt="">
+        </div>
+
+        <div class="uploader">
+          <label>License Image
+            <input type="file" id="license_image" name="license_image" accept="image/*">
+          </label>
+          <img id="preview_license_image" class="preview" alt="">
+        </div>
+
+        <div class="uploader">
+          <label>Bank Card (Front)
+            <input type="file" id="bank_card_front_image" name="bank_card_front_image" accept="image/*">
+          </label>
+          <img id="preview_bank_card_front_image" class="preview" alt="">
+        </div>
+
+        <div class="uploader">
+          <label>Bank Card (Back)
+            <input type="file" id="bank_card_back_image" name="bank_card_back_image" accept="image/*">
+          </label>
+          <img id="preview_bank_card_back_image" class="preview" alt="">
+        </div>
+
+        <div class="uploader">
+          <label>Bank QR Code
+            <input type="file" id="bank_qr_code_image" name="bank_qr_code_image" accept="image/*">
+          </label>
+          <img id="preview_bank_qr_code_image" class="preview" alt="">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="submitBtn" type="submit" disabled>Submit</button>
+        <span id="status"></span>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // ===== Helpers =====
+    const uniq = () => String(Date.now()).slice(-7); // 7-digit unique suffix
+    const randDigits = (n) => Array.from({length:n}, () => Math.floor(Math.random()*10)).join("");
+
+// Generate dummy data with uniqueness to avoid 400 duplicate errors
+    function makeDefaults() {
+      const u = uniq();
+      return {
+        // users
+        user_name: `John Doe ${u}`,
+        email: `john${u}@example.com`,
+        phone: `9751${randDigits(7)}`,     // 11+ digits, adjust to your validation
+        password: "secret123",
+
+        // business
+        business_name: `John's Cafe ${u}`,
+        business_type: "Cafe",
+        business_license_number: `LIC-${randDigits(9)}`,
+        latitude: 27.4728,
+        longitude: 89.639,
+        address: "Norzin Lam, Thimphu 11001, Bhutan",
+        delivery_option: "SELF",
+
+        // bank
+        bank_name: "Bhutan National Bank",
+        account_holder_name: "John Doe",
+        account_number: `12345${randDigits(6)}`,
+      };
+    }
+
+    let defaults = makeDefaults();
+
+    // ===== API Base handling =====
+    const apiBaseInput = document.getElementById("api_base");
+    const apiPreview = document.getElementById("api_preview");
+    const saveApiBtn = document.getElementById("save_api");
+    const regenBtn = document.getElementById("regen");
+
+    const getAPIBase = () => (localStorage.API_BASE || apiBaseInput.value || "http://localhost:6000").replace(/\/+$/, "");
+    const setAPIBase = (val) => { localStorage.API_BASE = (val || "").replace(/\/+$/, ""); };
+
+    function refreshApiPreview() {
+      apiPreview.textContent = `${getAPIBase()}/api/merchant/register`;
+    }
+    saveApiBtn.addEventListener("click", () => { setAPIBase(apiBaseInput.value); refreshApiPreview(); });
+    if (localStorage.API_BASE) apiBaseInput.value = localStorage.API_BASE;
+    refreshApiPreview();
+
+    regenBtn.addEventListener("click", () => {
+      defaults = makeDefaults();
+      fillInputs();
+    });
+
+    // ===== Fill inputs with defaults (editable) =====
+    function fillInputs() {
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ""; };
+      set("user_name", defaults.user_name);
+      set("email", defaults.email);
+      set("phone", defaults.phone);
+      set("password", defaults.password);
+
+      set("business_name", defaults.business_name);
+      set("business_type", defaults.business_type);
+      set("business_license_number", defaults.business_license_number);
+
+      set("latitude", defaults.latitude);
+      set("longitude", defaults.longitude);
+      set("address", defaults.address);
+      document.getElementById("delivery_option").value = defaults.delivery_option;
+
+      set("bank_name", defaults.bank_name);
+      set("account_holder_name", defaults.account_holder_name);
+      set("account_number", defaults.account_number);
+    }
+
+    // ===== Image previews =====
+    function wirePreview(inputId, imgId) {
+      const input = document.getElementById(inputId);
+      const img = document.getElementById(imgId);
+      input.addEventListener("change", () => {
+        const f = input.files?.[0];
+        if (!f) { img.src = ""; img.style.display = "none"; return; }
+        const url = URL.createObjectURL(f);
+        img.src = url;
+        img.style.display = "block";
+      });
+    }
+
+    // ===== Enable submit only when at least one file is selected =====
+    function wireSubmitGuard() {
+      const btn = document.getElementById("submitBtn");
+      const ids = ["business_logo", "license_image", "bank_card_front_image", "bank_card_back_image", "bank_qr_code_image"];
+      const check = () => {
+        const any = ids.some(id => document.getElementById(id).files?.length > 0);
+        btn.disabled = !any;
+      };
+      ids.forEach(id => document.getElementById(id).addEventListener("change", check));
+      check();
+    }
+
+    // ===== Submit (multipart/form-data) =====
+    function wireSubmit() {
+      const form = document.getElementById("uploadForm");
+      const status = document.getElementById("status");
+      const btn = document.getElementById("submitBtn");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault(); // prevent default form submit (no page refresh)
+        status.textContent = "Uploading...";
+        status.style.color = "#8aa0c6";
+        btn.disabled = true;
+
+        try {
+          const fd = new FormData();
+          // Gather current values (editable)
+          const getVal = id => document.getElementById(id).value;
+
+          // users
+          fd.append("user_name", getVal("user_name"));
+          fd.append("email", getVal("email"));
+          fd.append("phone", getVal("phone"));
+          fd.append("password", getVal("password"));
+
+          // business
+          fd.append("business_name", getVal("business_name"));
+          fd.append("business_type", getVal("business_type"));
+          fd.append("business_license_number", getVal("business_license_number"));
+          fd.append("latitude", getVal("latitude"));
+          fd.append("longitude", getVal("longitude"));
+          fd.append("address", getVal("address"));
+          fd.append("delivery_option", document.getElementById("delivery_option").value);
+
+          // bank
+          fd.append("bank_name", getVal("bank_name"));
+          fd.append("account_holder_name", getVal("account_holder_name"));
+          fd.append("account_number", getVal("account_number"));
+
+          // images (only if chosen)
+          const appendIf = (name) => {
+            const f = document.getElementById(name).files?.[0];
+            if (f) fd.append(name, f);
+          };
+          appendIf("business_logo");
+          appendIf("license_image");
+          appendIf("bank_card_front_image");
+          appendIf("bank_card_back_image");
+          appendIf("bank_qr_code_image");
+
+          const REGISTER_URL = `${getAPIBase()}/api/merchant/register`;
+          const res = await fetch(REGISTER_URL, { method: "POST", body: fd });
+          const json = await res.json();
+
+          console.log("Server response:", res.status, json);
+
+          if (!res.ok) {
+            // backend sends {error: "..."} on duplicate/validation
+            throw new Error(json?.error || `Upload failed (${res.status})`);
+          }
+
+          status.textContent = `Success! user_id=${json.user_id}`;
+          status.style.color = "#31c48d";
+        } catch (err) {
+          status.textContent = err.message || "Something went wrong";
+          status.style.color = "#ff7171";
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // ===== Boot =====
+    fillInputs();
+    ["business_logo","license_image","bank_card_front_image","bank_card_back_image","bank_qr_code_image"]
+      .forEach(name => wirePreview(name, `preview_${name}`));
+    wireSubmitGuard();
+    wireSubmit();
+  </script>
+</body>
+</html>

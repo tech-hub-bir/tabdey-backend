@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Merchant App - Notifications</title>
+    <script src="http://localhost:1001/socket.io/socket.io.js"></script>
+    <style>
+      body {
+        font-family: system-ui, Arial;
+      }
+      #log {
+        white-space: pre-wrap;
+        color: #333;
+      }
+      .card {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 8px;
+      }
+      .ok {
+        color: #0a0;
+      }
+      .err {
+        color: #c00;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Merchant App</h1>
+    <div id="notifications"></div>
+    <pre id="log"></pre>
+
+    <script>
+      const log = (m, cls) => {
+        const pre = document.getElementById("log");
+        const line = document.createElement("div");
+        if (cls) line.className = cls;
+        line.textContent = m;
+        pre.appendChild(line);
+      };
+
+      const MERCHANT_ID = 4; // change to your business_id
+
+      const socket = io("http://localhost:1001", {
+        transports: ["websocket"],
+        auth: { devUserId: 999, devRole: "merchant", merchantId: MERCHANT_ID },
+      });
+
+      socket.on("connect", () =>
+        log("Merchant socket connected: " + socket.id, "ok")
+      );
+      socket.on("connect_error", (e) =>
+        log("Socket error: " + e.message, "err")
+      );
+
+      // Receive notifications
+      socket.on("notify", (ev) => {
+        log("notify " + JSON.stringify(ev), "ok");
+
+        // Tell server we actually received it → sets delivered_at
+        socket.emit("merchant:notify:delivered", { id: ev.id });
+
+        const wrap = document.getElementById("notifications");
+        const d = document.createElement("div");
+        d.className = "card";
+        d.innerHTML = `
+        <strong>${ev.data.title}</strong><br/>
+        ${ev.data.body}<br/><br/>
+        <button data-id="${ev.id}" class="ack">ACK & Accept</button>
+      `;
+        wrap.prepend(d);
+      });
+
+      // Optional ACK (not required by backend anymore)
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest(".ack");
+        if (!b) return;
+        const notifId = b.getAttribute("data-id");
+        socket.emit("merchant:preorder:ack", {
+          eventId: notifId,
+          merchantId: MERCHANT_ID,
+          ts: Date.now(),
+        });
+        log("ACK sent for " + notifId, "ok");
+      });
+
+      socket.on("order:status", (ev) =>
+        log("order:status " + JSON.stringify(ev), "ok")
+      );
+    </script>
+  </body>
+</html>

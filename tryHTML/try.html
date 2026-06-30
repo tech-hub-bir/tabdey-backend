@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Profile Editor</title>
+  <style>
+    body { font-family: Arial; max-width: 500px; margin: 30px auto; }
+    img { max-width: 120px; border-radius: 8px; margin-bottom: 10px; }
+    input, button { width: 100%; margin-bottom: 15px; padding: 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>User Profile</h2>
+  <img id="profileImagePreview" src="" alt="Profile Image">
+
+  <form id="profileForm">
+    <input type="text" name="user_name" id="user_name" placeholder="Name" required />
+    <input type="email" name="email" id="email" placeholder="Email" required />
+    <input type="text" name="phone" id="phone" placeholder="Phone" required />
+    <input type="file" name="profile_image" id="profile_image" accept="image/*" />
+    <button type="submit">Update Profile</button>
+  </form>
+
+  <p id="statusMessage"></p>
+
+  <script>
+    const userId = 1; // Change to the logged-in user's ID
+    const baseURL = "http://localhost:3000";
+
+    // Load current profile data
+    async function fetchProfile() {
+      try {
+        const res = await fetch(`${baseURL}/api/profile/${userId}`);
+        const data = await res.json();
+
+        document.getElementById("user_name").value = data.user_name;
+        document.getElementById("email").value = data.email;
+        document.getElementById("phone").value = data.phone;
+        document.getElementById("profileImagePreview").src = `${baseURL}${data.profile_image}`;
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        document.getElementById("statusMessage").textContent = "Failed to load profile.";
+      }
+    }
+
+    // Handle form submission
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch(`${baseURL}/api/profile/${userId}`, {
+          method: "PUT",
+          body: formData
+        });
+
+        const result = await res.json();
+        document.getElementById("statusMessage").textContent = result.message || "Profile updated.";
+        fetchProfile(); // Refresh image
+      } catch (err) {
+        console.error("Update error:", err);
+        document.getElementById("statusMessage").textContent = "Failed to update profile.";
+      }
+    });
+
+    fetchProfile();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Business Types - Food & Mart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; }
+.container { display: flex; flex-wrap: wrap; padding: 20px; gap: 20px; }
+.section { flex: 1; min-width: 300px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+h2 { margin-top: 0; }
+form label { display: block; margin-top: 10px; font-weight: bold; }
+form input, form textarea { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
+form button { margin-top: 10px; padding: 10px 15px; border: none; background: #28a745; color: #fff; border-radius: 5px; cursor: pointer; }
+form button:hover { background: #218838; }
+.list { margin-top: 20px; }
+.card { background: #fafafa; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid #ddd; }
+.card img { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; }
+.card .info { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- FOOD SECTION -->
+  <div class="section">
+    <h2>Add Food Type</h2>
+    <form id="foodForm">
+      <input type="hidden" name="types" value="food">
+      <label>Name</label>
+      <input type="text" name="name" required>
+      <label>Description</label>
+      <textarea name="description"></textarea>
+      <label>Image</label>
+      <input type="file" name="image" accept="image/*">
+      <button type="submit">Add Food Type</button>
+    </form>
+    <div class="list" id="foodList">
+      <h3>Food Types</h3>
+    </div>
+  </div>
+
+  <!-- MART SECTION -->
+  <div class="section">
+    <h2>Add Mart Type</h2>
+    <form id="martForm">
+      <input type="hidden" name="types" value="mart">
+      <label>Name</label>
+      <input type="text" name="name" required>
+      <label>Description</label>
+      <textarea name="description"></textarea>
+      <label>Image</label>
+      <input type="file" name="image" accept="image/*">
+      <button type="submit">Add Mart Type</button>
+    </form>
+    <div class="list" id="martList">
+      <h3>Mart Types</h3>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:8080/api/admin/business-types';
+const UPLOADS_BASE = 'http://localhost:8080';
+
+async function fetchTypes(type) {
+  const res = await fetch(`${API_BASE}/type/${type}`);
+  const data = await res.json();
+  if (data.success) {
+    renderList(type, data.data);
+  }
+}
+
+function renderList(type, items) {
+  const listEl = document.getElementById(type + 'List');
+  listEl.innerHTML = `<h3>${type.charAt(0).toUpperCase() + type.slice(1)} Types</h3>`;
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const img = document.createElement('img');
+img.src = item.image 
+    ? `${UPLOADS_BASE}${item.image}` 
+    : `${UPLOADS_BASE}/uploads/placeholder.png`;    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = `<strong>${item.name}</strong><br>${item.description || ''}`;
+    card.appendChild(img);
+    card.appendChild(info);
+    listEl.appendChild(card);
+  });
+}
+
+async function submitForm(form, type) {
+  const formData = new FormData(form);
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (data.success) {
+    alert(`${type} type added successfully!`);
+    form.reset();
+    fetchTypes(type);
+  } else {
+    alert(data.message || 'Error adding type');
+  }
+}
+
+document.getElementById('foodForm').addEventListener('submit', e => {
+  e.preventDefault();
+  submitForm(e.target, 'food');
+});
+document.getElementById('martForm').addEventListener('submit', e => {
+  e.preventDefault();
+  submitForm(e.target, 'mart');
+});
+
+// Initial load
+fetchTypes('food');
+fetchTypes('mart');
+</script>
+
+</body>
+</html>

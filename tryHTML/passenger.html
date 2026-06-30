@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Passenger Ride Request</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; background: #f9f9f9; }
+    button { padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; }
+    pre, .log { background: #eee; padding: 1rem; border-radius: 5px; max-height: 150px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>Passenger - Request a Ride</h2>
+  <pre id="rideData">
+{
+  "rider_id": 2,
+  "pickup_lat": 27.4728,
+  "pickup_lng": 89.6397,
+  "dropoff_lat": 27.4900,
+  "dropoff_lng": 89.6500,
+  "pickup_address": "Thimphu City Center",
+  "dropoff_address": "Babesa",
+  "ride_type": "Grab Taxi",
+  "payment_method": "cash",
+  "distance_meters": 10,
+  "duration_seconds": 15,
+  "no_of_passenger": 1
+}
+  </pre>
+  <button id="requestRideBtn">Request Ride</button>
+  <h3>Status / Logs</h3>
+  <div class="log" id="passengerLog"></div>
+
+  <script>
+    const passengerLog = document.getElementById("passengerLog");
+    const rider_id = 2;
+    const driver_user_id = 3; // For demo, you might get this from somewhere else in real app
+
+    const socket = io("http://localhost:7000");
+
+    socket.on("connect", () => {
+      log(`Connected with socket id: ${socket.id}`);
+      socket.emit("joinPersonalRoom", rider_id);
+      log(`Joined personal room: user_${rider_id}`);
+    });
+
+    socket.on("rideAccepted", (data) => {
+      log(`Ride accepted by driver ${data.driver_id} for ride ${data.ride_id}`);
+      // Join driver room now (for updates or chat etc)
+      socket.emit("joinDriverRoom", data.driver_id);
+      log(`Joined driver room: driver_${data.driver_id}`);
+    });
+
+    function log(msg) {
+      passengerLog.textContent += msg + "\n";
+      passengerLog.scrollTop = passengerLog.scrollHeight;
+      console.log("[Passenger]", msg);
+    }
+
+    document.getElementById("requestRideBtn").onclick = async () => {
+      log("Sending ride request...");
+
+      const rideRequestData = {
+        rider_id,
+        pickup_lat: 27.4728,
+        pickup_lng: 89.6397,
+        dropoff_lat: 27.4900,
+        dropoff_lng: 89.6500,
+        pickup_address: "Thimphu City Center",
+        dropoff_address: "Babesa",
+        ride_type: "Grab Taxi",
+        payment_method: "cash",
+        distance_meters: 10,
+        duration_seconds: 15,
+        no_of_passenger: 1
+      };
+
+      try {
+        const response = await fetch("http://localhost:7000/api/rides/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rideRequestData),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          log(`Ride requested successfully with ID: ${data.request_id}`);
+
+          // Emit rideRequested event to notify driver room
+          socket.emit("rideRequested", {
+            rider_id,
+            driver_id: driver_user_id,
+            ride_id: data.request_id,
+            pickup_address: rideRequestData.pickup_address,
+          });
+          log("Emitted rideRequested event to driver room.");
+        } else {
+          log(`Error requesting ride: ${data.error || JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        log(`Fetch error: ${err.message}`);
+      }
+    };
+  </script>
+</body>
+</html>

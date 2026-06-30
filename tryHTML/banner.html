@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Banner Manager</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --muted: #94a3b8;
+        --fg: #e5e7eb;
+        --accent: #22c55e;
+        --danger: #ef4444;
+        --warn: #f59e0b;
+        --border: #1f2937;
+        --chip: #1f2937;
+        --chip-food: #0ea5e9;
+        --chip-mart: #22c55e;
+        --chip-inactive: #374151;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Ubuntu,
+          Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 16px;
+        align-items: start;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 10px 0 6px;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        background: #0b1220;
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        outline: none;
+      }
+      textarea {
+        min-height: 84px;
+        resize: vertical;
+      }
+      input[type="date"] {
+        color-scheme: dark;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: #052e16;
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: var(--border);
+        color: var(--fg);
+      }
+      .btn.warn {
+        background: var(--warn);
+        color: #1f1300;
+      }
+      .btn.danger {
+        background: var(--danger);
+        color: #fff;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+      }
+      .banner {
+        background: #0b1220;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .banner img {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        background: #020617;
+      }
+      .banner .meta {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .badges {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: #e2e8f0;
+        background: var(--chip);
+      }
+      .badge.food {
+        background: var(--chip-food);
+        color: #05243a;
+      }
+      .badge.mart {
+        background: var(--chip-mart);
+        color: #052e16;
+      }
+      .badge.inactive {
+        background: var(--chip-inactive);
+        color: #d1d5db;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .rowline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .switch input {
+        width: auto;
+      }
+      .flex {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      @media (max-width: 900px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .expiredNote {
+        background: #1f2937;
+        border: 1px dashed #374151;
+        padding: 8px 10px;
+        border-radius: 10px;
+        color: #fbbf24;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Banner Manager</h1>
+
+      <div class="row">
+        <!-- Create / Edit Form -->
+        <div class="card">
+          <h2 id="formTitle">Create Banner</h2>
+          <form id="bannerForm">
+            <input type="hidden" id="bannerId" />
+
+            <label>Business ID</label>
+            <input
+              id="business_id"
+              type="number"
+              min="1"
+              required
+              placeholder="e.g. 5"
+            />
+
+            <label>Owner Type</label>
+            <select id="owner_type" required>
+              <option value="" disabled selected>Select type</option>
+              <option value="food">food</option>
+              <option value="mart">mart</option>
+            </select>
+
+            <label>Title (optional)</label>
+            <input id="title" type="text" placeholder="Summer deals" />
+
+            <label>Description (optional)</label>
+            <textarea
+              id="description"
+              placeholder="Short tagline or copy..."
+            ></textarea>
+
+            <label>Image (JPG/PNG/WebP/SVG)</label>
+            <input id="banner_image" type="file" accept="image/*" />
+            <div class="hint">
+              If you don't pick a file while editing, the old image remains.
+            </div>
+
+            <div id="reactivateNote" class="expiredNote hidden">
+              This banner is inactive because it has expired. Set a new
+              <b>End Date</b> and toggle <b>Active</b> to reactivate.
+            </div>
+
+            <div class="flex" style="margin-top: 10px">
+              <label class="switch">
+                <input id="is_active" type="checkbox" checked />
+                <span>Active</span>
+              </label>
+            </div>
+
+            <div class="flex" style="gap: 10px">
+              <div style="flex: 1">
+                <label>Start Date (optional)</label>
+                <input id="start_date" type="date" />
+              </div>
+              <div style="flex: 1">
+                <label>End Date (optional)</label>
+                <input id="end_date" type="date" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn primary" type="submit" id="submitBtn">
+                Create
+              </button>
+              <button class="btn ghost hidden" type="button" id="cancelEditBtn">
+                Cancel Edit
+              </button>
+              <button
+                class="btn warn hidden"
+                type="button"
+                id="quickReactivateBtn"
+              >
+                Quick Reactivate (+7 days)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Filters + List -->
+        <div class="card">
+          <h2>All Banners</h2>
+          <div
+            class="flex"
+            style="gap: 10px; margin-bottom: 10px; flex-wrap: wrap"
+          >
+            <input
+              id="filter_business_id"
+              type="number"
+              min="1"
+              placeholder="Filter: business_id (ALL banners)"
+            />
+            <select id="filter_owner_type" style="min-width: 150px">
+              <option value="">All types</option>
+              <option value="food">food</option>
+              <option value="mart">mart</option>
+            </select>
+            <label
+              class="switch"
+              title="Only for generic list (no business id)"
+            >
+              <input id="filter_active_only" type="checkbox" />
+              <span>Active only (generic)</span>
+            </label>
+            <button class="btn ghost" id="refreshBtn">Refresh</button>
+          </div>
+          <div class="muted" style="margin-bottom: 8px">
+            Tip: If you set a <b>business_id</b>, we fetch <b>all</b> banners
+            from <code>/api/banners/business/:id</code>. Without it, we fetch
+            active lists by kind or the generic list.
+          </div>
+          <div id="list" class="grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ======= CONFIG =======
+      const API_BASE = "http://localhost:8080"; // change if needed
+
+      // Build absolute image URL for server-relative paths (e.g. /uploads/banners/xxx.jpg)
+      function imgSrc(u) {
+        if (!u) return "";
+        if (/^https?:\/\//i.test(u)) return u; // keep absolute
+        if (u.startsWith("/")) return API_BASE + u; // prefix server-relative
+        return API_BASE + "/" + u.replace(/^\/+/, "");
+      }
+
+      // ======= DOM =======
+      const form = document.getElementById("bannerForm");
+      const formTitle = document.getElementById("formTitle");
+      const submitBtn = document.getElementById("submitBtn");
+      const cancelEditBtn = document.getElementById("cancelEditBtn");
+      const quickReactivateBtn = document.getElementById("quickReactivateBtn");
+      const reactivateNote = document.getElementById("reactivateNote");
+
+      const bannerId = document.getElementById("bannerId");
+      const business_id = document.getElementById("business_id");
+      const owner_type = document.getElementById("owner_type");
+      const title = document.getElementById("title");
+      const description = document.getElementById("description");
+      const banner_image = document.getElementById("banner_image");
+      const is_active = document.getElementById("is_active");
+      const start_date = document.getElementById("start_date");
+      const end_date = document.getElementById("end_date");
+
+      const filter_business_id = document.getElementById("filter_business_id");
+      const filter_owner_type = document.getElementById("filter_owner_type");
+      const filter_active_only = document.getElementById("filter_active_only");
+      const list = document.getElementById("list");
+      const refreshBtn = document.getElementById("refreshBtn");
+
+      // ======= Utils =======
+      function fmtDate(d) {
+        if (!d) return "—";
+        try {
+          return new Date(d).toLocaleString();
+        } catch {
+          return d;
+        }
+      }
+      function fmtDateRange(sd, ed) {
+        const s = sd ? sd : "—";
+        const e = ed ? ed : "—";
+        return `${s} → ${e}`;
+      }
+      function toast(msg) {
+        const t = document.createElement("div");
+        t.textContent = msg;
+        Object.assign(t.style, {
+          position: "fixed",
+          right: "14px",
+          bottom: "14px",
+          background: "#111827",
+          color: "#e5e7eb",
+          padding: "10px 14px",
+          borderRadius: "10px",
+          border: "1px solid #1f2937",
+          zIndex: 1000,
+        });
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2200);
+      }
+      function addDaysToISO(days, baseDateStr) {
+        const base = baseDateStr ? new Date(baseDateStr) : new Date();
+        const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        d.setDate(d.getDate() + days);
+        const iso = d.toISOString().slice(0, 10);
+        return iso;
+      }
+      function todayISO() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      function buildCard(b) {
+        const el = document.createElement("div");
+        el.className = "banner";
+        const ownerClass =
+          (b.owner_type || "").toLowerCase() === "food" ? "food" : "mart";
+        const inactive =
+          !b.is_active || (b.end_date && b.end_date <= todayISO());
+        el.innerHTML = `
+          <img src="${imgSrc(
+            b.banner_image
+          )}" alt="" onerror="this.style.display='none'">
+          <div class="meta">
+            <div class="rowline">
+              <strong>#${b.id}</strong>
+              <div class="badges">
+                <span class="badge ${ownerClass}">${b.owner_type || ""}</span>
+                <span class="badge ${inactive ? "inactive" : ""}">${
+          inactive ? "Inactive" : "Active"
+        }</span>
+              </div>
+            </div>
+            <div class="muted">Business: ${b.business_id}</div>
+            ${b.title ? `<div>${b.title}</div>` : ``}
+            ${b.description ? `<div class="muted">${b.description}</div>` : ``}
+            <div class="muted">Dates: ${fmtDateRange(
+              b.start_date,
+              b.end_date
+            )}</div>
+            <div class="muted">Created: ${fmtDate(b.created_at)}</div>
+            <div class="actions">
+              <button class="btn ghost" data-edit="${b.id}">Edit</button>
+              ${
+                inactive
+                  ? `<button class="btn warn" data-reactivate="${b.id}">Reactivate…</button>`
+                  : ``
+              }
+              <button class="btn danger" data-del="${b.id}">Delete</button>
+            </div>
+          </div>
+        `;
+        el.querySelector("[data-edit]").addEventListener("click", () =>
+          loadIntoForm(b)
+        );
+        if (inactive) {
+          el.querySelector("[data-reactivate]").addEventListener("click", () =>
+            quickReactivateCard(b)
+          );
+        }
+        el.querySelector("[data-del]").addEventListener("click", () =>
+          doDelete(b.id)
+        );
+        return el;
+      }
+
+      function setEditMode(on) {
+        if (on) {
+          formTitle.textContent = "Edit Banner";
+          submitBtn.textContent = "Update";
+          cancelEditBtn.classList.remove("hidden");
+        } else {
+          formTitle.textContent = "Create Banner";
+          submitBtn.textContent = "Create";
+          cancelEditBtn.classList.add("hidden");
+          bannerId.value = "";
+          form.reset();
+          is_active.checked = true;
+          reactivateNote.classList.add("hidden");
+          quickReactivateBtn.classList.add("hidden");
+        }
+      }
+
+      function loadIntoForm(b) {
+        setEditMode(true);
+        bannerId.value = b.id;
+        business_id.value = b.business_id;
+        owner_type.value = (b.owner_type || "").toLowerCase();
+        title.value = b.title || "";
+        description.value = b.description || "";
+        is_active.checked = !!b.is_active;
+        start_date.value = b.start_date
+          ? String(b.start_date).slice(0, 10)
+          : "";
+        end_date.value = b.end_date ? String(b.end_date).slice(0, 10) : "";
+        banner_image.value = "";
+
+        // show reactivation hint if inactive/expired
+        const expired = b.end_date && b.end_date <= todayISO();
+        const inactive = !b.is_active || expired;
+        if (inactive) {
+          reactivateNote.classList.remove("hidden");
+          quickReactivateBtn.classList.remove("hidden");
+        } else {
+          reactivateNote.classList.add("hidden");
+          quickReactivateBtn.classList.add("hidden");
+        }
+
+        banner_image.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      cancelEditBtn.addEventListener("click", () => setEditMode(false));
+
+      // ======= API helpers =======
+      async function fetchList() {
+        const bid = filter_business_id.value.trim();
+        const kind = filter_owner_type.value.trim();
+
+        let url;
+        if (bid) {
+          // ALL banners by business (active + inactive)
+          const qs = new URLSearchParams();
+          if (kind) qs.set("owner_type", kind);
+          url = `${API_BASE}/api/banners/business/${encodeURIComponent(
+            bid
+          )}?${qs}`;
+        } else if (kind) {
+          // Kinded active endpoint
+          url = `${API_BASE}/api/banners/${kind}`;
+        } else {
+          // Generic list; use active_only flag if checked
+          const qs = new URLSearchParams();
+          if (filter_active_only.checked) qs.set("active_only", "true");
+          url = `${API_BASE}/api/banners?${qs}`;
+        }
+
+        const res = await fetch(url);
+        const json = await res.json();
+        list.innerHTML = "";
+        (json.data || []).forEach((b) => list.appendChild(buildCard(b)));
+      }
+
+      async function doCreate(fd) {
+        const res = await fetch(`${API_BASE}/api/banners`, {
+          method: "POST",
+          body: fd,
+        });
+        return res.json();
+      }
+
+      async function doUpdateFormData(id, fd) {
+        const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+          method: "PUT",
+          body: fd,
+        });
+        return res.json();
+      }
+
+      async function doUpdateJSON(id, payload) {
+        const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        return res.json();
+      }
+
+      async function doDelete(id) {
+        if (!confirm(`Delete banner #${id}?`)) return;
+        const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+          method: "DELETE",
+        });
+        const json = await res.json();
+        if (json.success) {
+          toast("Deleted");
+          fetchList();
+        } else toast(json.message || "Delete failed");
+      }
+
+      // Quick Reactivate from card
+      async function quickReactivateCard(b) {
+        const suggested = addDaysToISO(7);
+        const newEnd = prompt(
+          `Set a new END DATE (YYYY-MM-DD) to reactivate:`,
+          suggested
+        );
+        if (newEnd === null) return; // user cancelled
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(newEnd)) {
+          alert("Please enter a valid date as YYYY-MM-DD.");
+          return;
+        }
+        const payload = { is_active: 1, end_date: newEnd };
+        const json = await doUpdateJSON(b.id, payload);
+        if (json.success) {
+          toast("Reactivated");
+          fetchList();
+        } else alert(json.message || "Failed to reactivate");
+      }
+
+      // Quick Reactivate button in form
+      quickReactivateBtn.addEventListener("click", async () => {
+        if (!bannerId.value) return;
+        const suggested = addDaysToISO(7, end_date.value || undefined);
+        const newEnd = prompt(`New END DATE (YYYY-MM-DD)`, suggested);
+        if (newEnd === null) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(newEnd)) {
+          alert("Please enter a valid date as YYYY-MM-DD.");
+          return;
+        }
+        const json = await doUpdateJSON(bannerId.value, {
+          is_active: 1,
+          end_date: newEnd,
+        });
+        if (json.success) {
+          toast("Reactivated");
+          setEditMode(false);
+          fetchList();
+        } else {
+          alert(json.message || "Failed to reactivate");
+        }
+      });
+
+      // ======= Handlers =======
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const fd = new FormData();
+        fd.set("business_id", business_id.value);
+        fd.set("owner_type", owner_type.value); // REQUIRED on create
+        if (title.value) fd.set("title", title.value);
+        if (description.value) fd.set("description", description.value);
+        if (banner_image.files[0])
+          fd.set("banner_image", banner_image.files[0]);
+        fd.set("is_active", is_active.checked ? "1" : "0");
+        if (start_date.value) fd.set("start_date", start_date.value);
+        if (end_date.value) fd.set("end_date", end_date.value);
+
+        let json;
+        if (bannerId.value) json = await doUpdateFormData(bannerId.value, fd);
+        else json = await doCreate(fd);
+
+        if (json.success) {
+          toast(bannerId.value ? "Updated" : "Created");
+          setEditMode(false);
+          fetchList();
+        } else {
+          alert(json.message || "Request failed");
+        }
+      });
+
+      refreshBtn.addEventListener("click", fetchList);
+
+      // initial
+      fetchList();
+    </script>
+  </body>
+</html>

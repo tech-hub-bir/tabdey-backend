@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schedule Order</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #0f1b33;
+        --muted: #8ea0c2;
+        --text: #e8eefc;
+        --line: rgba(255, 255, 255, 0.12);
+        --accent: #5dd6ff;
+        --danger: #ff6b6b;
+        --ok: #34d399;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(
+            1200px 800px at 20% 10%,
+            rgba(93, 214, 255, 0.14),
+            transparent 60%
+          ),
+          radial-gradient(
+            900px 700px at 80% 0%,
+            rgba(52, 211, 153, 0.12),
+            transparent 55%
+          ),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 28px 14px;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 980px;
+      }
+
+      .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 6px;
+        line-height: 1.4;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      @media (max-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.06),
+          rgba(255, 255, 255, 0.03)
+        );
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      .sectionTitle {
+        font-size: 14px;
+        margin: 0 0 10px;
+        color: rgba(232, 238, 252, 0.92);
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 10px 0 6px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 11px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text);
+        outline: none;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(142, 160, 194, 0.75);
+      }
+
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      @media (max-width: 520px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.22);
+        font-size: 12px;
+        color: rgba(232, 238, 252, 0.9);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 0;
+        padding: 11px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .btnPrimary {
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          rgba(93, 214, 255, 0.5)
+        );
+        color: #04101a;
+      }
+
+      .btnGhost {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .btnDanger {
+        background: rgba(255, 107, 107, 0.15);
+        color: var(--danger);
+        border: 1px solid rgba(255, 107, 107, 0.35);
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.22);
+        color: rgba(232, 238, 252, 0.92);
+        white-space: pre-wrap;
+      }
+
+      .status.ok {
+        border-color: rgba(52, 211, 153, 0.35);
+      }
+      .status.err {
+        border-color: rgba(255, 107, 107, 0.35);
+      }
+
+      .previewGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      @media (max-width: 520px) {
+        .previewGrid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .thumb {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.25);
+        aspect-ratio: 4 / 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(142, 160, 194, 0.8);
+        font-size: 12px;
+      }
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .thumb .badge {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 8px;
+      }
+
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: rgba(232, 238, 252, 0.92);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div>
+          <h1>Schedule Order (with Images)</h1>
+          <div class="hint">
+            Upload up to <b>6</b> images and set date/time. Everything else
+            stays default.
+          </div>
+        </div>
+        <span class="pill"
+          >POST <span class="mono">/orders</span> as multipart/form-data</span
+        >
+      </div>
+
+      <div class="grid">
+        <!-- Left: form -->
+        <div class="card">
+          <p class="sectionTitle">Schedule details</p>
+
+          <div class="row">
+            <div>
+              <label>Schedule date</label>
+              <input id="scheduleDate" type="date" />
+            </div>
+            <div>
+              <label>Schedule time</label>
+              <input id="scheduleTime" type="time" />
+            </div>
+          </div>
+
+          <label>Upload images (1–6)</label>
+          <input id="photos" type="file" accept="image/*" multiple />
+
+          <div class="small">
+            Field name used: <span class="mono">delivery_photos</span> (your
+            middleware supports delivery_photo / delivery_photos / image /
+            images).
+          </div>
+
+          <hr
+            style="border: 0; border-top: 1px solid var(--line); margin: 14px 0"
+          />
+
+          <p class="sectionTitle">Defaults (edit only if you want)</p>
+
+          <div class="row">
+            <div>
+              <label>User ID</label>
+              <input id="userId" type="number" value="1" min="1" />
+            </div>
+            <div>
+              <label>Service Type</label>
+              <select id="serviceType">
+                <option value="FOOD">FOOD</option>
+                <option value="MART">MART</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Payment Method</label>
+              <select id="paymentMethod">
+                <option value="COD">COD</option>
+                <option value="WALLET">WALLET</option>
+                <option value="CARD">CARD</option>
+              </select>
+            </div>
+            <div>
+              <label>Fulfillment Type</label>
+              <select id="fulfillmentType">
+                <option value="Delivery">Delivery</option>
+                <option value="Pickup">Pickup</option>
+              </select>
+            </div>
+          </div>
+
+          <label>Delivery Address (required if Delivery)</label>
+          <input
+            id="deliveryAddress"
+            type="text"
+            value="Thimphu, Bhutan"
+            placeholder="Full address"
+          />
+
+          <label>Items (JSON)</label>
+          <textarea id="itemsJson" spellcheck="false">
+[
+  {
+    "business_id": 19,
+    "business_name": "Mama Earth",
+    "menu_id": 101,
+    "item_name": "Sample Item",
+    "quantity": 1,
+    "price": 100,
+    "subtotal": 100
+  }
+]</textarea
+          >
+
+          <div class="actions">
+            <button class="btnPrimary" id="btnSubmit">
+              Submit scheduled order
+            </button>
+            <button class="btnGhost" id="btnFillNow">
+              Set date/time to now + 30 min
+            </button>
+            <button class="btnDanger" id="btnClear">Clear status</button>
+          </div>
+
+          <div id="status" class="status">Ready.</div>
+        </div>
+
+        <!-- Right: previews + request preview -->
+        <div class="card">
+          <p class="sectionTitle">Image preview</p>
+          <div id="preview" class="previewGrid">
+            <div class="thumb">No images</div>
+          </div>
+
+          <hr
+            style="border: 0; border-top: 1px solid var(--line); margin: 14px 0"
+          />
+
+          <p class="sectionTitle">
+            Payload preview (sent in <span class="mono">payload</span>)
+          </p>
+          <div
+            id="payloadPreview"
+            class="status mono"
+            style="min-height: 210px"
+          ></div>
+
+          <div class="small">
+            The request is <b>multipart/form-data</b>: JSON goes in
+            <span class="mono">payload</span> and images go in
+            <span class="mono">delivery_photos</span>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ✅ Change to your backend base URL
+      const API_URL = "http://localhost:3000";
+
+      const el = (id) => document.getElementById(id);
+
+      const scheduleDate = el("scheduleDate");
+      const scheduleTime = el("scheduleTime");
+      const photos = el("photos");
+      const preview = el("preview");
+      const statusBox = el("status");
+      const payloadPreview = el("payloadPreview");
+
+      const userId = el("userId");
+      const serviceType = el("serviceType");
+      const paymentMethod = el("paymentMethod");
+      const fulfillmentType = el("fulfillmentType");
+      const deliveryAddress = el("deliveryAddress");
+      const itemsJson = el("itemsJson");
+
+      function setStatus(msg, ok = null) {
+        statusBox.textContent = msg;
+        statusBox.classList.remove("ok", "err");
+        if (ok === true) statusBox.classList.add("ok");
+        if (ok === false) statusBox.classList.add("err");
+      }
+
+      function toISODate(d) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      function toTimeHHMM(d) {
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return `${hh}:${mm}`;
+      }
+
+      function defaultScheduleIfEmpty() {
+        const now = new Date();
+        if (!scheduleDate.value) scheduleDate.value = toISODate(now);
+        if (!scheduleTime.value) scheduleTime.value = toTimeHHMM(now);
+      }
+
+      function getScheduleISO() {
+        // returns ISO string like "2025-12-26T14:30:00"
+        if (!scheduleDate.value || !scheduleTime.value) return null;
+        return `${scheduleDate.value}T${scheduleTime.value}:00`;
+      }
+
+      function buildPayload() {
+        let items = [];
+        try {
+          items = JSON.parse(itemsJson.value || "[]");
+          if (!Array.isArray(items)) items = [];
+        } catch {
+          items = [];
+        }
+
+        const payload = {
+          user_id: Number(userId.value || 0),
+          service_type: serviceType.value,
+          payment_method: paymentMethod.value,
+          fulfillment_type: fulfillmentType.value,
+          delivery_address:
+            fulfillmentType.value === "Delivery"
+              ? { address: String(deliveryAddress.value || "").trim() }
+              : null,
+
+          // ✅ schedule fields (keep naming simple)
+          is_scheduled: true,
+          scheduled_at: getScheduleISO(),
+
+          // ✅ basic totals (optional; keep default)
+          total_amount: items.reduce(
+            (s, it) => s + Number(it.subtotal || 0),
+            0
+          ),
+
+          items,
+        };
+
+        return payload;
+      }
+
+      function renderPayloadPreview() {
+        const payload = buildPayload();
+        payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderImagePreview(files) {
+        preview.innerHTML = "";
+        const arr = Array.from(files || []);
+        if (!arr.length) {
+          preview.innerHTML = `<div class="thumb">No images</div>`;
+          return;
+        }
+
+        arr.slice(0, 6).forEach((file, idx) => {
+          const url = URL.createObjectURL(file);
+          const div = document.createElement("div");
+          div.className = "thumb";
+          div.innerHTML = `
+            <img alt="preview" src="${url}" />
+            <div class="badge">#${idx + 1} • ${(file.size / 1024).toFixed(
+            0
+          )} KB</div>
+          `;
+          preview.appendChild(div);
+        });
+      }
+
+      photos.addEventListener("change", () => {
+        const arr = Array.from(photos.files || []);
+        if (arr.length > 6) {
+          setStatus("Too many images. Max is 6.", false);
+        } else {
+          setStatus(`Selected ${arr.length} image(s).`, true);
+        }
+        renderImagePreview(photos.files);
+      });
+
+      ["input", "change"].forEach((evt) => {
+        scheduleDate.addEventListener(evt, renderPayloadPreview);
+        scheduleTime.addEventListener(evt, renderPayloadPreview);
+        userId.addEventListener(evt, renderPayloadPreview);
+        serviceType.addEventListener(evt, renderPayloadPreview);
+        paymentMethod.addEventListener(evt, renderPayloadPreview);
+        fulfillmentType.addEventListener(evt, renderPayloadPreview);
+        deliveryAddress.addEventListener(evt, renderPayloadPreview);
+        itemsJson.addEventListener(evt, renderPayloadPreview);
+      });
+
+      el("btnFillNow").addEventListener("click", () => {
+        const d = new Date(Date.now() + 30 * 60000);
+        scheduleDate.value = toISODate(d);
+        scheduleTime.value = toTimeHHMM(d);
+        renderPayloadPreview();
+        setStatus("Schedule set to now + 30 minutes.", true);
+      });
+
+      el("btnClear").addEventListener("click", () => {
+        setStatus("Ready.", null);
+      });
+
+      el("btnSubmit").addEventListener("click", async () => {
+        defaultScheduleIfEmpty();
+
+        const files = Array.from(photos.files || []);
+        if (files.length > 6) {
+          setStatus("Upload max 6 images only.", false);
+          return;
+        }
+
+        const payload = buildPayload();
+
+        if (!payload.user_id) {
+          setStatus("user_id is required.", false);
+          return;
+        }
+        if (!payload.items || !payload.items.length) {
+          setStatus("items is required (must be a JSON array).", false);
+          return;
+        }
+        if (payload.fulfillment_type === "Delivery") {
+          const addr = payload.delivery_address?.address || "";
+          if (!String(addr).trim()) {
+            setStatus("delivery_address is required for Delivery.", false);
+            return;
+          }
+        }
+        if (!payload.scheduled_at) {
+          setStatus("Please set schedule date and time.", false);
+          return;
+        }
+
+        const fd = new FormData();
+        fd.append("payload", JSON.stringify(payload));
+
+        // ✅ field supported by your middleware: delivery_photos
+        files.forEach((f) => fd.append("delivery_photos", f));
+
+        try {
+          setStatus("Submitting...", null);
+
+          const resp = await fetch(`${API_URL}/orders`, {
+            method: "POST",
+            body: fd,
+          });
+
+          const text = await resp.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = { raw: text };
+          }
+
+          if (!resp.ok) {
+            setStatus(
+              `FAILED (${resp.status})\n` + JSON.stringify(data, null, 2),
+              false
+            );
+            return;
+          }
+
+          setStatus(
+            `SUCCESS (${resp.status})\n` + JSON.stringify(data, null, 2),
+            true
+          );
+        } catch (e) {
+          setStatus("NETWORK ERROR:\n" + (e?.message || String(e)), false);
+        }
+      });
+
+      // init defaults
+      defaultScheduleIfEmpty();
+      renderPayloadPreview();
+      renderImagePreview([]);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Generated files (will be created during build)
+generated/
+*.ts
+*.map
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+pm2-*.log
+
+# Testing
+coverage/
+.nyc_output/
+test/
+tests/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+
+# Other services (excluded to keep build context small)
+# REMOVED driver/ from here since we need to build it
+bfs-wallet-backend/
+
+grablike-backend/
+
+
+sms-gateway-backend/
+tryHTML/
+events-backend/
+Map_and_location_services/
+
+# Prisma - keep this!
+# prisma/ - DO NOT ignore
+
+# Admin service specific
+admin/node_modules/
+admin/.env

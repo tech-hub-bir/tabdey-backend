@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Order Test (Payload + Delivery Photo)</title>
+    <style>
+      :root {
+        font-family: Inter, system-ui, Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0b1220;
+        color: #e8eefc;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 18px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 14px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 10px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 10px;
+        opacity: 0.95;
+      }
+      .muted {
+        opacity: 0.78;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      .btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      button {
+        background: #2d6bff;
+        color: white;
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      button.danger {
+        background: #e43d3d;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      textarea,
+      input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.06);
+        color: #e8eefc;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        padding: 10px;
+        outline: none;
+      }
+      textarea {
+        min-height: 320px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .kv div {
+        padding: 2px 0;
+      }
+      .pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .pill.ok {
+        background: rgba(69, 214, 133, 0.16);
+        border: 1px solid rgba(69, 214, 133, 0.35);
+        color: #7dffb5;
+      }
+      .pill.warn {
+        background: rgba(255, 183, 77, 0.14);
+        border: 1px solid rgba(255, 183, 77, 0.35);
+        color: #ffd08a;
+      }
+      .pill.bad {
+        background: rgba(228, 61, 61, 0.14);
+        border: 1px solid rgba(228, 61, 61, 0.35);
+        color: #ff9c9c;
+      }
+
+      .previewImg {
+        width: 100%;
+        max-height: 260px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: none;
+        margin-top: 10px;
+      }
+
+      .orders {
+        margin-top: 12px;
+        display: grid;
+        gap: 12px;
+      }
+      .userBlock {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+      .userHead {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .orderCard {
+        padding: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .orderTop {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      @media (max-width: 700px) {
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .items {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .itemRow {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .small {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 12px;
+      }
+      a {
+        color: #9cc3ff;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <h1>Order Test Frontend (payload + delivery_photo)</h1>
+      <div class="muted">
+        Uses <code>/orders</code> (multipart/form-data with fields
+        <b>payload</b> and <b>delivery_photo</b>) and
+        <code>/orders/business/19/grouped</code> to display orders + image from
+        <code>delivery_photo_url</code>.
+      </div>
+
+      <div class="row" style="margin-top: 14px">
+        <div class="card">
+          <h2>1) Create Order (pre-filled JSON + choose image)</h2>
+
+          <label class="muted">Payload (you can keep as-is)</label>
+          <textarea id="payload"></textarea>
+
+          <div style="margin-top: 10px">
+            <label class="muted"
+              >Select image (sent as field name: <b>delivery_photo</b>)</label
+            ><br />
+            <input id="photo" type="file" accept="image/*" />
+            <img id="photoPreview" class="previewImg" alt="Selected preview" />
+            <div id="photoNote" class="muted" style="margin-top: 6px"></div>
+          </div>
+
+          <div class="btns">
+            <button id="btnCreate">Create Order</button>
+            <button class="secondary" id="btnClear">Clear Response</button>
+          </div>
+
+          <div style="margin-top: 12px">
+            <div class="muted">Create response:</div>
+            <pre id="createOut">(none)</pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>2) Fetch & Display Grouped Orders (business 19)</h2>
+          <div class="muted">Endpoint: <code id="groupedUrl"></code></div>
+
+          <div class="btns">
+            <button class="secondary" id="btnLoad">Load Grouped Orders</button>
+            <button class="danger" id="btnWipe">Clear Orders</button>
+          </div>
+
+          <div style="margin-top: 12px">
+            <div id="statusLine" class="muted">Status: (idle)</div>
+          </div>
+
+          <div id="orders" class="orders"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // If you open this page from http://localhost:1001/ it auto-uses same origin.
+      // If you open the HTML file directly (file://), set BASE_URL manually:
+      // const BASE_URL = "http://localhost:1001";
+      const BASE_URL = `https://grab.newedge.bt/orders`;
+      //   const BASE_URL = `http://localhost:1001`;
+
+      const CREATE_URL = `${BASE_URL}/orders`;
+      const GROUPED_URL = `${BASE_URL}/orders/business/19/grouped`;
+
+      document.getElementById("groupedUrl").textContent = GROUPED_URL;
+
+      // Pre-filled payload (your exact JSON, already typed)
+      const DEFAULT_PAYLOAD = {
+        service_type: "MART",
+        user_id: 59,
+        payment_method: "WALLET",
+        fulfillment_type: "Delivery",
+        delivery_address: {
+          address: "Thimphu, Near Clock Tower",
+          lat: 27.472,
+          lng: 89.639,
+        },
+        delivery_floor_unit: "Floor 2, Unit 4B",
+        delivery_instruction_note: "Call me when you arrive",
+        delivery_special_mode: "DROP_OFF",
+        total_amount: 50.0,
+        discount_amount: 10.0,
+        delivery_fee: 0.0,
+        merchant_delivery_fee: 40.0,
+        platform_fee: 20.0,
+        note_for_restaurant: "Free delivery promo",
+        if_unavailable: "remove",
+        items: [
+          {
+            business_id: 19,
+            business_name: "Sample Mart",
+            menu_id: 101,
+            item_name: "Sunflower Oil 1L",
+            item_image: "sunflower-oil-1l.png",
+            quantity: 2,
+            price: 100.0,
+            subtotal: 200.0,
+          },
+        ],
+      };
+
+      const elPayload = document.getElementById("payload");
+      const elPhoto = document.getElementById("photo");
+      const elPhotoPreview = document.getElementById("photoPreview");
+      const elPhotoNote = document.getElementById("photoNote");
+      const elCreateOut = document.getElementById("createOut");
+      const elStatus = document.getElementById("statusLine");
+      const elOrders = document.getElementById("orders");
+      const btnCreate = document.getElementById("btnCreate");
+
+      elPayload.value = JSON.stringify(DEFAULT_PAYLOAD, null, 2);
+
+      elPhoto.addEventListener("change", () => {
+        const f = elPhoto.files && elPhoto.files[0];
+        if (!f) {
+          elPhotoPreview.style.display = "none";
+          elPhotoNote.textContent = "";
+          return;
+        }
+        elPhotoNote.textContent = `Selected: ${f.name} (${Math.round(
+          f.size / 1024
+        )} KB)`;
+
+        const url = URL.createObjectURL(f);
+        elPhotoPreview.src = url;
+        elPhotoPreview.style.display = "block";
+      });
+
+      document.getElementById("btnClear").addEventListener("click", () => {
+        elCreateOut.textContent = "(none)";
+      });
+
+      document.getElementById("btnWipe").addEventListener("click", () => {
+        elOrders.innerHTML = "";
+        elStatus.textContent = "Status: cleared";
+      });
+
+      // Create order (multipart/form-data):
+      // - payload: JSON string
+      // - delivery_photo: file (must match .single("delivery_photo"))
+      document
+        .getElementById("btnCreate")
+        .addEventListener("click", async () => {
+          btnCreate.disabled = true;
+          elCreateOut.textContent = "Sending...";
+
+          try {
+            // Validate payload JSON
+            let payloadObj;
+            try {
+              payloadObj = JSON.parse(elPayload.value);
+            } catch (e) {
+              throw new Error("Payload is not valid JSON.");
+            }
+
+            const fd = new FormData();
+            fd.append("payload", JSON.stringify(payloadObj)); // IMPORTANT: field name is "payload"
+
+            const file = elPhoto.files && elPhoto.files[0];
+            if (file) {
+              fd.append("delivery_photo", file); // IMPORTANT: field name is "delivery_photo"
+            }
+
+            const res = await fetch(CREATE_URL, {
+              method: "POST",
+              body: fd,
+            });
+
+            const text = await res.text();
+            let data;
+            try {
+              data = JSON.parse(text);
+            } catch {
+              data = text;
+            }
+
+            elCreateOut.textContent =
+              `HTTP ${res.status}\n` +
+              (typeof data === "string" ? data : JSON.stringify(data, null, 2));
+          } catch (err) {
+            elCreateOut.textContent = `Error: ${err.message || String(err)}`;
+          } finally {
+            btnCreate.disabled = false;
+          }
+        });
+
+      // Render helpers
+      function esc(s) {
+        return String(s ?? "").replace(
+          /[&<>"']/g,
+          (m) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[m])
+        );
+      }
+
+      function statusPill(status) {
+        const s = String(status || "").toUpperCase();
+        if (["DELIVERED", "COMPLETED"].includes(s))
+          return `<span class="pill ok">${esc(s)}</span>`;
+        if (["CANCELLED", "CANCELED"].includes(s))
+          return `<span class="pill bad">${esc(s)}</span>`;
+        return `<span class="pill warn">${esc(s || "UNKNOWN")}</span>`;
+      }
+
+      function fullImgUrl(path) {
+        // backend returns like "/uploads/order_delivery_photos/xxx.png"
+        if (!path) return null;
+        if (String(path).startsWith("http")) return path;
+        return `${BASE_URL}${path}`;
+      }
+
+      function renderGrouped(data) {
+        elOrders.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          elOrders.innerHTML = `<div class="muted">No grouped orders found.</div>`;
+          return;
+        }
+
+        for (const group of data) {
+          const user = group.user || {};
+          const orders = Array.isArray(group.orders) ? group.orders : [];
+
+          const userHtml = `
+        <div class="userBlock">
+          <div class="userHead">
+            <div>
+              <div style="font-weight:800;">User #${esc(user.user_id)}</div>
+              <div class="small">${esc(user.name)} • ${esc(user.phone)} • ${esc(
+            user.email
+          )}</div>
+            </div>
+            <div class="small">Orders: <b>${orders.length}</b></div>
+          </div>
+
+          ${orders
+            .map((o) => {
+              const deliver = o.deliver_to || {};
+              const totals = o.totals || {};
+              const img = fullImgUrl(deliver.delivery_photo_url);
+
+              return `
+              <div class="orderCard">
+                <div class="orderTop">
+                  <div>
+                    <div style="font-weight:800;">${esc(o.order_id)} • ${esc(
+                o.service_type || ""
+              )}</div>
+                    <div class="small">Payment: ${esc(
+                      o.payment_method
+                    )} • Fulfillment: ${esc(
+                o.fulfillment_type
+              )} • Priority: ${esc(o.priority)}</div>
+                  </div>
+                  <div>${statusPill(o.status)}</div>
+                </div>
+
+                <div class="grid2">
+                  <div class="kv">
+                    <div class="muted">Address</div><div>${esc(
+                      deliver.address
+                    )}</div>
+                    <div class="muted">Lat/Lng</div><div>${esc(
+                      deliver.lat
+                    )} , ${esc(deliver.lng)}</div>
+                    <div class="muted">Floor/Unit</div><div>${esc(
+                      deliver.delivery_floor_unit
+                    )}</div>
+                    <div class="muted">Instruction</div><div>${esc(
+                      deliver.delivery_instruction_note
+                    )}</div>
+                    <div class="muted">Special Mode</div><div><b>${esc(
+                      deliver.delivery_special_mode
+                    )}</b></div>
+                  </div>
+
+                  <div class="kv">
+                    <div class="muted">Total</div><div>${esc(
+                      totals.total_amount
+                    )}</div>
+                    <div class="muted">Discount</div><div>${esc(
+                      totals.discount_amount
+                    )}</div>
+                    <div class="muted">Delivery Fee</div><div>${esc(
+                      totals.delivery_fee
+                    )}</div>
+                    <div class="muted">Platform Fee</div><div>${esc(
+                      totals.platform_fee
+                    )}</div>
+                    <div class="muted">Merchant Del. Fee</div><div>${esc(
+                      totals.merchant_delivery_fee
+                    )}</div>
+                  </div>
+                </div>
+
+                ${
+                  img
+                    ? `
+                  <div style="margin-top:10px;">
+                    <div class="muted">Delivery photo:</div>
+                    <div class="small"><a href="${esc(
+                      img
+                    )}" target="_blank" rel="noreferrer">${esc(img)}</a></div>
+                    <img class="previewImg" style="display:block; margin-top:8px;" src="${esc(
+                      img
+                    )}" alt="delivery photo"/>
+                  </div>
+                `
+                    : `
+                  <div class="muted" style="margin-top:10px;">No delivery photo on this order.</div>
+                `
+                }
+
+                <div class="items">
+                  ${(o.items || [])
+                    .map(
+                      (it) => `
+                    <div class="itemRow">
+                      <div>
+                        <div style="font-weight:700;">${esc(it.item_name)}</div>
+                        <div class="small">menu_id: ${esc(
+                          it.menu_id
+                        )} • qty: ${esc(it.quantity)} • price: ${esc(
+                        it.price
+                      )}</div>
+                      </div>
+                      <div style="text-align:right;">
+                        <div style="font-weight:700;">Subtotal: ${esc(
+                          it.subtotal
+                        )}</div>
+                        <div class="small">pf: ${esc(
+                          it.platform_fee
+                        )} • df: ${esc(it.delivery_fee)}</div>
+                      </div>
+                    </div>
+                  `
+                    )
+                    .join("")}
+                </div>
+
+                <div class="muted" style="margin-top:10px;">
+                  Created: ${esc(o.created_at)} • Updated: ${esc(o.updated_at)}
+                </div>
+              </div>
+            `;
+            })
+            .join("")}
+        </div>
+      `;
+
+          elOrders.insertAdjacentHTML("beforeend", userHtml);
+        }
+      }
+
+      document.getElementById("btnLoad").addEventListener("click", async () => {
+        elStatus.textContent = "Status: loading...";
+        try {
+          const res = await fetch(GROUPED_URL);
+          const json = await res.json();
+          if (!res.ok) {
+            elStatus.textContent = `Status: error HTTP ${res.status}`;
+            elOrders.innerHTML = `<pre>${esc(
+              JSON.stringify(json, null, 2)
+            )}</pre>`;
+            return;
+          }
+
+          elStatus.textContent = "Status: loaded";
+          renderGrouped(json.data || []);
+        } catch (e) {
+          elStatus.textContent = `Status: error (${e.message || e})`;
+        }
+      });
+    </script>
+  </body>
+</html>

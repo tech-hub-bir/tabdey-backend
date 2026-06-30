@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Driver Ride Accept</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1rem; background: #f9f9f9; }
+    button { padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; margin-top: 1rem; }
+    .log, #rideRequestInfo { background: #eee; padding: 1rem; border-radius: 5px; max-height: 150px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>Driver - Awaiting Ride Requests</h2>
+  <div id="rideRequestInfo">No ride requests yet.</div>
+  <button id="acceptRideBtn" style="display:none;">Accept Ride</button>
+  <h3>Logs</h3>
+  <div class="log" id="driverLog"></div>
+
+  <script>
+    const driverLog = document.getElementById("driverLog");
+    const rideRequestInfo = document.getElementById("rideRequestInfo");
+    const acceptRideBtn = document.getElementById("acceptRideBtn");
+
+    const driver_user_id = 3;  // Driver's user id
+    const rider_id = 2;        // Passenger id (for demo, from ride request)
+
+    let currentRideRequestId = null;
+
+    const socket = io("http://localhost:7000");
+
+    socket.on("connect", () => {
+      log(`Connected with socket id: ${socket.id}`);
+      socket.emit("joinDriverRoom", driver_user_id);
+      log(`Joined driver room: driver_${driver_user_id}`);
+    });
+
+    socket.on("newRideRequest", (data) => {
+      log(`New ride request received: ${JSON.stringify(data)}`);
+      currentRideRequestId = data.ride_id;
+      rideRequestInfo.textContent = `New ride request from rider ${data.rider_id}:\nPickup: ${data.pickup_address}`;
+      acceptRideBtn.style.display = "inline-block";
+    });
+
+    function log(msg) {
+      driverLog.textContent += msg + "\n";
+      driverLog.scrollTop = driverLog.scrollHeight;
+      console.log("[Driver]", msg);
+    }
+
+    acceptRideBtn.onclick = async () => {
+      if (!currentRideRequestId) {
+        log("No ride request to accept.");
+        return;
+      }
+
+      log("Sending accept ride request...");
+
+      const acceptData = {
+        ride_request_id: currentRideRequestId,
+        driver_user_id,
+        passenger_id: rider_id,
+      };
+
+      try {
+        const response = await fetch("http://localhost:7000/api/riderequest/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(acceptData),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          log(`Ride accepted successfully: ${JSON.stringify(data)}`);
+          acceptRideBtn.style.display = "none";
+          rideRequestInfo.textContent = "Ride accepted!";
+        } else {
+          log(`Error accepting ride: ${data.message || JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        log(`Fetch error: ${err.message}`);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Driver Location Updater</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #message.success { color: green; }
+    #message.error { color: red; }
+    #countdown { font-size: 18px; color: #007bff; }
+    #location, #status { margin-bottom: 10px; }
+    button, label { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+    #driverList { margin-top: 20px; border: 1px solid #ddd; padding: 15px; display: none; }
+    .driver-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+    .switch { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    input[type="checkbox"] { transform: scale(1.5); cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Driver Auto Location Update (5s)</h2>
+
+  <div class="switch">
+    <label for="toggleOnline">🟢 Online Mode</label>
+    <input type="checkbox" id="toggleOnline" />
+  </div>
+
+  <p id="location">📍 Current Location: --</p>
+  <p id="status">📡 Waiting for location updates...</p>
+  <p id="message"></p>
+  <p id="countdown">Update paused</p>
+
+  <button id="showDriversBtn">Show All Drivers</button>
+  <div id="driverList"></div>
+
+  <script>
+    const user_id =1 ;
+
+    let socket = null;
+    let updateInterval = null;
+    let countdownTimer = null;
+
+    const statusEl = document.getElementById("status");
+    const locationEl = document.getElementById("location");
+    const messageEl = document.getElementById("message");
+    const countdownEl = document.getElementById("countdown");
+    const driverListEl = document.getElementById("driverList");
+    const showDriversBtn = document.getElementById("showDriversBtn");
+    const toggleOnline = document.getElementById("toggleOnline");
+
+    toggleOnline.addEventListener("change", (e) => {
+      const goingOnline = e.target.checked;
+
+      if (goingOnline) {
+        connectSocket();
+      } else {
+        goOffline();
+      }
+    });
+
+    function connectSocket() {
+      socket = io("http://localhost:5002");
+
+      socket.on("connect", () => {
+        console.log("✅ Connected:", socket.id);
+        socket.emit("driverOnlineStatus", { user_id, is_online: true });
+        updateLocation();
+        updateInterval = setInterval(updateLocation, 5000);
+        startCountdown(5);
+        statusEl.textContent = "🟢 Online and tracking...";
+      });
+
+      socket.on("receiveAllDrivers", (drivers) => {
+        driverListEl.innerHTML = "<h3>🚘 All Drivers</h3>";
+        drivers.forEach(d => {
+          driverListEl.innerHTML += `
+            <div class="driver-item">
+              <strong>${d.name}</strong> (${d.phone})<br/>
+              📍 Lat: ${d.location.lat}, Lng: ${d.location.lng} <br/>
+              🕓 Updated At: ${new Date(d.updatedAt).toLocaleTimeString()}
+            </div>
+          `;
+        });
+        driverListEl.style.display = "block";
+      });
+
+      socket.on("locationUpdateSuccess", (data) => {
+        messageEl.textContent = data.message;
+        messageEl.className = "success";
+      });
+
+      socket.on("locationUpdateError", (data) => {
+        messageEl.textContent = data.message;
+        messageEl.className = "error";
+      });
+    }
+
+    function goOffline() {
+      if (socket && socket.connected) {
+        socket.emit("driverOnlineStatus", { user_id, is_online: false });
+        socket.disconnect();
+        console.log("🔴 Disconnected socket manually.");
+      }
+
+      clearInterval(updateInterval);
+      clearInterval(countdownTimer);
+      updateInterval = null;
+      countdownEl.textContent = "Update paused";
+      statusEl.textContent = "🔴 Offline mode";
+    }
+
+    function updateLocation() {
+      if (!navigator.geolocation) {
+        statusEl.textContent = "❌ Geolocation not supported.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          locationEl.textContent = `📍 Current Location: Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+          statusEl.textContent = "📡 Sending location update...";
+          socket.emit("driverLocationUpdate", { user_id, lat, lng });
+        },
+        (err) => {
+          statusEl.textContent = `⚠️ Error getting location: ${err.message}`;
+        }
+      );
+    }
+
+    function startCountdown(seconds) {
+      clearInterval(countdownTimer);
+      countdownEl.textContent = `Next update in: ${seconds}s`;
+
+      countdownTimer = setInterval(() => {
+        seconds--;
+        countdownEl.textContent = `Next update in: ${seconds}s`;
+        if (seconds <= 0) {
+          clearInterval(countdownTimer);
+          startCountdown(5);
+        }
+      }, 1000);
+    }
+
+    showDriversBtn.addEventListener("click", () => {
+      if (socket && socket.connected) {
+        socket.emit("getAllDrivers");
+      } else {
+        alert("Please go online first.");
+      }
+    });
+  </script>
+</body>
+</html>

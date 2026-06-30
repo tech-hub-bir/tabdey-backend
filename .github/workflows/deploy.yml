@@ -1,0 +1,494 @@
+name: Build & Deploy (Changed Services Only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "food/**"
+      - "mart/**"
+      - "merchant/**"
+      - "order_management/**"
+      - "driver/**"
+      - "admin/**"
+      - "lib/**"
+      - "middlewares/**"
+      - "prisma/**"
+      - "generated/**"
+      - "package.json"
+      - "package-lock.json"
+      - "Map_and_location_services/**"
+      - "wallet_payment/**"
+      - "bfs-wallet-backend/**"
+      - "grablike-backend/**"
+      - "sms-gateway-backend/**"
+      - "user_merchant_chat/**"
+      - "expo_push_notification/**"
+      - "events-backend/**"
+      - "k8s/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      any: ${{ steps.filter.outputs.any }}
+      food: ${{ steps.filter.outputs.food }}
+      mart: ${{ steps.filter.outputs.mart }}
+      merchant: ${{ steps.filter.outputs.merchant }}
+      order_management: ${{ steps.filter.outputs.order_management }}
+      driver: ${{ steps.filter.outputs.driver }}
+      admin: ${{ steps.filter.outputs.admin }}
+      map_location: ${{ steps.filter.outputs.map_location }}
+      wallet_payment: ${{ steps.filter.outputs.wallet_payment }}
+      bfs_wallet_backend: ${{ steps.filter.outputs.bfs_wallet_backend }}
+      grablike_backend: ${{ steps.filter.outputs.grablike_backend }}
+      sms_gateway: ${{ steps.filter.outputs.sms_gateway }}
+      user_merchant_chat: ${{ steps.filter.outputs.user_merchant_chat }}
+      expo_push_notification: ${{ steps.filter.outputs.expo_push_notification }}
+      events_backend: ${{ steps.filter.outputs.events_backend }}
+      k8s: ${{ steps.filter.outputs.k8s }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            food:
+              - 'food/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            mart:
+              - 'mart/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            merchant:
+              - 'merchant/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            order_management:
+              - 'order_management/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            driver:
+              - 'driver/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            admin:
+              - 'admin/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            map_location:
+              - 'Map_and_location_services/**'
+
+            wallet_payment:
+              - 'wallet_payment/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            bfs_wallet_backend:
+              - 'bfs-wallet-backend/**'
+
+            grablike_backend:
+              - 'grablike-backend/**'
+
+            sms_gateway:
+              - 'sms-gateway-backend/**'
+
+            user_merchant_chat:
+              - 'user_merchant_chat/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            expo_push_notification:
+              - 'expo_push_notification/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+
+            events_backend:
+              - 'events-backend/**'
+
+            k8s:
+              - 'k8s/**'
+
+            any:
+              - 'food/**'
+              - 'mart/**'
+              - 'merchant/**'
+              - 'order_management/**'
+              - 'driver/**'
+              - 'admin/**'
+              - 'lib/**'
+              - 'middlewares/**'
+              - 'prisma/**'
+              - 'generated/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'Map_and_location_services/**'
+              - 'wallet_payment/**'
+              - 'bfs-wallet-backend/**'
+              - 'grablike-backend/**'
+              - 'sms-gateway-backend/**'
+              - 'user_merchant_chat/**'
+              - 'expo_push_notification/**'
+              - 'events-backend/**'
+              - 'k8s/**'
+
+  build:
+    name: Build & push changed images
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & push Food
+        if: needs.changes.outputs.food == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./food/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-food:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-food:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Mart
+        if: needs.changes.outputs.mart == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./mart/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-mart:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-mart:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Merchant
+        if: needs.changes.outputs.merchant == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./merchant/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-merchant:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-merchant:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Order Management
+        if: needs.changes.outputs.order_management == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./order_management/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-order-management:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-order-management:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Driver
+        if: needs.changes.outputs.driver == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./driver/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-driver:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-driver:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Admin
+        if: needs.changes.outputs.admin == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./admin/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-admin:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-admin:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Map & Location Services
+        if: needs.changes.outputs.map_location == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./Map_and_location_services
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-map-location-services:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-map-location-services:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Wallet Payment
+        if: needs.changes.outputs.wallet_payment == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./wallet_payment/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-wallet-payment:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-wallet-payment:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push BFS Wallet Backend
+        if: needs.changes.outputs.bfs_wallet_backend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./bfs-wallet-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-bfs-wallet-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-bfs-wallet-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Grablike Backend
+        if: needs.changes.outputs.grablike_backend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./grablike-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-grablike-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-grablike-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push SMS Gateway Backend
+        if: needs.changes.outputs.sms_gateway == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sms-gateway-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-sms-gateway-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-sms-gateway-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push User Merchant Chat
+        if: needs.changes.outputs.user_merchant_chat == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./user_merchant_chat/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-user-merchant-chat:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-user-merchant-chat:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Expo Push Notification
+        if: needs.changes.outputs.expo_push_notification == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./expo_push_notification/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-expo-push-notification:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-expo-push-notification:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push Events Backend
+        if: needs.changes.outputs.events_backend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./events-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/superapp-events-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/superapp-events-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy changed services to k3s (prod)
+    runs-on: self-hosted
+    needs: [changes, build]
+    if: needs.changes.outputs.any == 'true'
+
+    env:
+      KUBECONFIG: /home/software/.kube/config
+      NAMESPACE: prod
+      DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+      SHA: ${{ github.sha }}
+
+      FOOD_CHANGED: ${{ needs.changes.outputs.food }}
+      MART_CHANGED: ${{ needs.changes.outputs.mart }}
+      MERCHANT_CHANGED: ${{ needs.changes.outputs.merchant }}
+      ORDER_CHANGED: ${{ needs.changes.outputs.order_management }}
+      DRIVER_CHANGED: ${{ needs.changes.outputs.driver }}
+      ADMIN_CHANGED: ${{ needs.changes.outputs.admin }}
+      MAP_CHANGED: ${{ needs.changes.outputs.map_location }}
+      WALLET_CHANGED: ${{ needs.changes.outputs.wallet_payment }}
+      BFS_WALLET_CHANGED: ${{ needs.changes.outputs.bfs_wallet_backend }}
+      GRABLIKE_CHANGED: ${{ needs.changes.outputs.grablike_backend }}
+      SMS_GATEWAY_CHANGED: ${{ needs.changes.outputs.sms_gateway }}
+      USER_MERCHANT_CHAT_CHANGED: ${{ needs.changes.outputs.user_merchant_chat }}
+      EXPO_PUSH_NOTIFICATION_CHANGED: ${{ needs.changes.outputs.expo_push_notification }}
+      EVENTS_BACKEND_CHANGED: ${{ needs.changes.outputs.events_backend }}
+      K8S_CHANGED: ${{ needs.changes.outputs.k8s }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply manifests (only if k8s/ changed)
+        if: env.K8S_CHANGED == 'true'
+        run: |
+          set -euo pipefail
+          kubectl apply -f k8s/
+          kubectl -n "${NAMESPACE}" get ingress,svc,deploy -o wide || true
+
+      - name: Deploy changed services
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Deploying to namespace: ${NAMESPACE}"
+          kubectl get nodes
+          kubectl -n "${NAMESPACE}" get deploy -o name || true
+
+          deploy_if_exists () {
+            local name="$1"
+            local container="$2"
+            local image="$3"
+
+            if kubectl -n "${NAMESPACE}" get deploy/"${name}" >/dev/null 2>&1; then
+              echo "Updating ${name} (${container}) -> ${image}"
+              kubectl -n "${NAMESPACE}" set image deploy/"${name}" "${container}"="${image}"
+              kubectl -n "${NAMESPACE}" rollout status deploy/"${name}" --timeout=600s
+            else
+              echo "WARN: deployment ${name} not found in ${NAMESPACE}, skipping."
+            fi
+          }
+
+          if [ "${FOOD_CHANGED:-}" = "true" ]; then
+            deploy_if_exists food food "${DOCKER_USER}/superapp-food:${SHA}"
+          fi
+
+          if [ "${MART_CHANGED:-}" = "true" ]; then
+            deploy_if_exists mart mart "${DOCKER_USER}/superapp-mart:${SHA}"
+          fi
+
+          if [ "${MERCHANT_CHANGED:-}" = "true" ]; then
+            deploy_if_exists merchant merchant "${DOCKER_USER}/superapp-merchant:${SHA}"
+          fi
+
+          if [ "${ORDER_CHANGED:-}" = "true" ]; then
+            deploy_if_exists order-management order-management "${DOCKER_USER}/superapp-order-management:${SHA}"
+          fi
+
+          if [ "${DRIVER_CHANGED:-}" = "true" ]; then
+            deploy_if_exists driver driver "${DOCKER_USER}/superapp-driver:${SHA}"
+          fi
+
+          if [ "${ADMIN_CHANGED:-}" = "true" ]; then
+            deploy_if_exists admin admin "${DOCKER_USER}/superapp-admin:${SHA}"
+          fi
+
+          if [ "${MAP_CHANGED:-}" = "true" ]; then
+            deploy_if_exists map-location-services map-location-services "${DOCKER_USER}/superapp-map-location-services:${SHA}"
+          fi
+
+          if [ "${WALLET_CHANGED:-}" = "true" ]; then
+            deploy_if_exists wallet-payment wallet-payment "${DOCKER_USER}/superapp-wallet-payment:${SHA}"
+          fi
+
+          if [ "${BFS_WALLET_CHANGED:-}" = "true" ]; then
+            deploy_if_exists bfs-wallet-backend bfs-wallet-backend "${DOCKER_USER}/superapp-bfs-wallet-backend:${SHA}"
+          fi
+
+          if [ "${GRABLIKE_CHANGED:-}" = "true" ]; then
+            deploy_if_exists grablike-backend grablike-backend "${DOCKER_USER}/superapp-grablike-backend:${SHA}"
+          fi
+
+          if [ "${SMS_GATEWAY_CHANGED:-}" = "true" ]; then
+            deploy_if_exists sms-gateway-backend sms-gateway-backend "${DOCKER_USER}/superapp-sms-gateway-backend:${SHA}"
+          fi
+
+          if [ "${USER_MERCHANT_CHAT_CHANGED:-}" = "true" ]; then
+            deploy_if_exists user-merchant-chat user-merchant-chat "${DOCKER_USER}/superapp-user-merchant-chat:${SHA}"
+          fi
+
+          if [ "${EXPO_PUSH_NOTIFICATION_CHANGED:-}" = "true" ]; then
+            deploy_if_exists expo-push-notification expo-push-notification "${DOCKER_USER}/superapp-expo-push-notification:${SHA}"
+          fi
+
+          if [ "${EVENTS_BACKEND_CHANGED:-}" = "true" ]; then
+            deploy_if_exists events-backend events-backend "${DOCKER_USER}/superapp-events-backend:${SHA}"
+          fi
+
+          exit 0

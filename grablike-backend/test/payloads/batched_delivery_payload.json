@@ -1,0 +1,53 @@
+{
+  "passenger_id": 1001,
+  "merchant_id": 5001,
+  "job_type": "BATCH",
+  "batch_id": 9001,
+  "cityId": "thimphu",
+  "serviceType": "delivery",
+  "service_code": "D",
+  "pickup": [27.4728, 89.6394],
+  "pickup_place": "Merchant Warehouse, Thimphu",
+  "distance_m": 5000,
+  "duration_s": 900,
+  "currency": "BTN",
+  "fare": 5.00,
+  "fare_cents": 500,
+  "payment_method": { "method": "card" },
+  "offer_code": null,
+  "drops": [
+    {
+      "order_id": "ORD-10001",
+      "user_id": 2001,
+      "address": "House 1, Road A, Thimphu",
+      "lat": 27.4720,
+      "lng": 89.6390,
+      "customer_name": "Tashi",
+      "customer_phone": "+97577123456",
+      "amount": 12.5,
+      "delivery_fee": 1.0,
+      "platform_fee": 0.2,
+      "merchant_delivery_fee": 0.8,
+      "payment_method": "cash",
+      "cash_to_collect": 12.5
+    },
+    {
+      "order_id": "ORD-10002",
+      "user_id": 2002,
+      "address": "House 2, Road B, Thimphu",
+      "lat": 27.4735,
+      "lng": 89.6402,
+      "customer_name": "Kinley",
+      "customer_phone": "+97577123457",
+      "amount": 8.0,
+      "delivery_fee": 1.0,
+      "platform_fee": 0.2,
+      "merchant_delivery_fee": 0.8,
+      "payment_method": "card",
+      "cash_to_collect": 0
+    }
+  ],
+  "waypoints": [
+    { "lat": 27.4735, "lng": 89.6402, "address": "House 2, Road B, Thimphu" }
+  ]
+}

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Banner Management</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #f3f4f6;
+        margin: 0;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin-bottom: 12px;
+      }
+      .card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .card-header span {
+        font-size: 13px;
+        color: #6b7280;
+      }
+      label {
+        font-size: 12px;
+        color: #374151;
+        display: block;
+        margin-top: 6px;
+      }
+      input[type="text"],
+      input[type="number"],
+      input[type="date"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 6px 8px;
+        margin-top: 2px;
+        font-size: 13px;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 50px;
+        resize: vertical;
+      }
+      input[type="checkbox"] {
+        transform: scale(0.95);
+        margin-right: 4px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row > div {
+        flex: 1;
+      }
+      button {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background-color: #2563eb;
+        color: white;
+      }
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .btn-secondary {
+        background-color: #e5e7eb;
+        color: #111827;
+      }
+      .top-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-end;
+        margin-bottom: 12px;
+      }
+      .top-bar > div {
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+      }
+      #message {
+        margin-bottom: 10px;
+        font-size: 13px;
+      }
+      #message.success {
+        color: #16a34a;
+      }
+      #message.error {
+        color: #dc2626;
+      }
+      img.banner-preview {
+        max-width: 160px;
+        max-height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        margin-top: 4px;
+      }
+      small {
+        font-size: 11px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Banner Manager</h1>
+
+    <div id="message"></div>
+
+    <div class="top-bar">
+      <div>
+        <label>API Base URL</label>
+        <input type="text" id="apiBase" value="http://localhost:3000/api" />
+        <small>Change if your backend URL is different.</small>
+      </div>
+      <div>
+        <label>Business ID</label>
+        <input type="number" id="businessId" placeholder="e.g. 19" />
+      </div>
+      <div>
+        <label>Owner Type (optional)</label>
+        <select id="ownerTypeFilter">
+          <option value="">All</option>
+          <option value="food">food</option>
+          <option value="mart">mart</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn-primary" id="loadBtn">Load Banners</button>
+      </div>
+    </div>
+
+    <div id="bannersContainer"></div>
+
+    <script>
+      // === Config ===
+      function getApiBase() {
+        return document.getElementById("apiBase").value.replace(/\/+$/, "");
+      }
+
+      const messageEl = document.getElementById("message");
+      function setMessage(text, type = "") {
+        messageEl.textContent = text || "";
+        messageEl.className = type ? type : "";
+      }
+
+      document.getElementById("loadBtn").addEventListener("click", loadBanners);
+
+      async function loadBanners() {
+        setMessage("");
+        const businessId = document.getElementById("businessId").value.trim();
+        const ownerType = document.getElementById("ownerTypeFilter").value;
+
+        if (!businessId) {
+          setMessage("Please enter a business_id.", "error");
+          return;
+        }
+
+        const API_BASE = getApiBase();
+        const url = new URL(
+          API_BASE + "/banners/business/" + encodeURIComponent(businessId)
+        );
+        if (ownerType) url.searchParams.set("owner_type", ownerType);
+
+        try {
+          const res = await fetch(url.toString());
+          const json = await res.json();
+          if (!json.success) {
+            setMessage(json.message || "Failed to load banners.", "error");
+            return;
+          }
+          renderBanners(json.data || []);
+          setMessage(`Loaded ${json.data.length} banner(s).`, "success");
+        } catch (err) {
+          console.error(err);
+          setMessage("Error loading banners: " + err.message, "error");
+        }
+      }
+
+      function renderBanners(list) {
+        const container = document.getElementById("bannersContainer");
+        container.innerHTML = "";
+
+        if (!list.length) {
+          container.textContent = "No banners found for this business.";
+          return;
+        }
+
+        list.forEach((banner) => {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          const header = document.createElement("div");
+          header.className = "card-header";
+          header.innerHTML = `
+          <div>
+            <strong>Banner #${banner.id}</strong>
+            <span> • Business: ${banner.business_id}</span>
+          </div>
+          <div>
+            <span>Owner: ${banner.owner_type || "-"}</span>
+          </div>
+        `;
+          card.appendChild(header);
+
+          // Title & Description
+          const titleLabel = document.createElement("label");
+          titleLabel.textContent = "Title";
+          const titleInput = document.createElement("input");
+          titleInput.type = "text";
+          titleInput.value = banner.title || "";
+          titleLabel.appendChild(titleInput);
+          card.appendChild(titleLabel);
+
+          const descLabel = document.createElement("label");
+          descLabel.textContent = "Description";
+          const descInput = document.createElement("textarea");
+          descInput.value = banner.description || "";
+          descLabel.appendChild(descInput);
+          card.appendChild(descLabel);
+
+          // Dates & is_active & owner_type
+          const row1 = document.createElement("div");
+          row1.className = "row";
+
+          // start_date
+          const startWrap = document.createElement("div");
+          const startLabel = document.createElement("label");
+          startLabel.textContent = "Start Date";
+          const startInput = document.createElement("input");
+          startInput.type = "date";
+          if (banner.start_date) {
+            const d = new Date(banner.start_date);
+            if (!isNaN(d.getTime())) {
+              startInput.value = d.toISOString().slice(0, 10);
+            }
+          }
+          startLabel.appendChild(startInput);
+          startWrap.appendChild(startLabel);
+          row1.appendChild(startWrap);
+
+          // end_date
+          const endWrap = document.createElement("div");
+          const endLabel = document.createElement("label");
+          endLabel.textContent = "End Date";
+          const endInput = document.createElement("input");
+          endInput.type = "date";
+          if (banner.end_date) {
+            const d2 = new Date(banner.end_date);
+            if (!isNaN(d2.getTime())) {
+              endInput.value = d2.toISOString().slice(0, 10);
+            }
+          }
+          endLabel.appendChild(endInput);
+          endWrap.appendChild(endLabel);
+          row1.appendChild(endWrap);
+
+          // is_active
+          const activeWrap = document.createElement("div");
+          const activeLabel = document.createElement("label");
+          activeLabel.textContent = "Active";
+          const activeCheck = document.createElement("input");
+          activeCheck.type = "checkbox";
+          activeCheck.checked = !!banner.is_active;
+          activeLabel.insertBefore(activeCheck, activeLabel.firstChild);
+          activeWrap.appendChild(activeLabel);
+          row1.appendChild(activeWrap);
+
+          // owner_type
+          const ownerWrap = document.createElement("div");
+          const ownerLabel = document.createElement("label");
+          ownerLabel.textContent = "Owner Type";
+          const ownerSelect = document.createElement("select");
+          ["", "food", "mart"].forEach((optVal) => {
+            const opt = document.createElement("option");
+            opt.value = optVal;
+            opt.textContent = optVal || "Select";
+            if ((banner.owner_type || "").toLowerCase() === optVal) {
+              opt.selected = true;
+            }
+            ownerSelect.appendChild(opt);
+          });
+          ownerLabel.appendChild(ownerSelect);
+          ownerWrap.appendChild(ownerLabel);
+          row1.appendChild(ownerWrap);
+
+          card.appendChild(row1);
+
+          // Image preview + file + clear
+          const imgLabel = document.createElement("label");
+          imgLabel.textContent = "Banner Image";
+
+          if (banner.banner_image) {
+            const img = document.createElement("img");
+            img.src = banner.banner_image;
+            img.alt = "Banner image";
+            img.className = "banner-preview";
+            imgLabel.appendChild(img);
+          } else {
+            const noImg = document.createElement("div");
+            noImg.innerHTML = "<small>No image set</small>";
+            imgLabel.appendChild(noImg);
+          }
+
+          const fileInput = document.createElement("input");
+          fileInput.type = "file";
+          fileInput.accept = "image/*";
+
+          const clearWrap = document.createElement("div");
+          clearWrap.style.marginTop = "4px";
+          const clearCheck = document.createElement("input");
+          clearCheck.type = "checkbox";
+          const clearText = document.createElement("span");
+          clearText.textContent = " Clear existing image";
+          clearWrap.appendChild(clearCheck);
+          clearWrap.appendChild(clearText);
+
+          imgLabel.appendChild(fileInput);
+          imgLabel.appendChild(clearWrap);
+
+          card.appendChild(imgLabel);
+
+          // Wallet / pricing options
+          const walletRow = document.createElement("div");
+          walletRow.className = "row";
+
+          const userWrap = document.createElement("div");
+          const userLabel = document.createElement("label");
+          userLabel.textContent = "Payer User ID (for wallet charge)";
+          const userInput = document.createElement("input");
+          userInput.type = "number";
+          userInput.placeholder = "optional";
+          userLabel.appendChild(userInput);
+          userWrap.appendChild(userLabel);
+          walletRow.appendChild(userWrap);
+
+          const amountWrap = document.createElement("div");
+          const amountLabel = document.createElement("label");
+          amountLabel.textContent = "Total Amount (manual charge)";
+          const amountInput = document.createElement("input");
+          amountInput.type = "number";
+          amountInput.placeholder = "optional";
+          amountInput.step = "0.01";
+          amountLabel.appendChild(amountInput);
+          amountWrap.appendChild(amountLabel);
+          walletRow.appendChild(amountWrap);
+
+          const autoWrap = document.createElement("div");
+          const autoLabel = document.createElement("label");
+          autoLabel.textContent = "Auto Price (use base_price)";
+          const autoCheck = document.createElement("input");
+          autoCheck.type = "checkbox";
+          autoLabel.insertBefore(autoCheck, autoLabel.firstChild);
+          autoWrap.appendChild(autoLabel);
+          walletRow.appendChild(autoWrap);
+
+          card.appendChild(walletRow);
+
+          // Save button
+          const actions = document.createElement("div");
+          actions.style.marginTop = "8px";
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "btn-primary";
+          saveBtn.textContent = "Save Changes";
+          actions.appendChild(saveBtn);
+
+          const infoText = document.createElement("small");
+          infoText.textContent =
+            "If you set dates and user_id + (total_amount OR auto_price), it will charge wallet.";
+          actions.appendChild(document.createElement("br"));
+          actions.appendChild(infoText);
+
+          card.appendChild(actions);
+
+          saveBtn.addEventListener("click", async () => {
+            await saveBanner({
+              banner,
+              titleInput,
+              descInput,
+              startInput,
+              endInput,
+              activeCheck,
+              ownerSelect,
+              fileInput,
+              clearCheck,
+              userInput,
+              amountInput,
+              autoCheck,
+              saveBtn,
+            });
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function saveBanner(ctx) {
+        const {
+          banner,
+          titleInput,
+          descInput,
+          startInput,
+          endInput,
+          activeCheck,
+          ownerSelect,
+          fileInput,
+          clearCheck,
+          userInput,
+          amountInput,
+          autoCheck,
+          saveBtn,
+        } = ctx;
+
+        setMessage("");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+
+        try {
+          const payload = {};
+
+          // basic fields
+          payload.title = titleInput.value.trim();
+          payload.description = descInput.value.trim();
+
+          if (startInput.value) payload.start_date = startInput.value;
+          if (endInput.value) payload.end_date = endInput.value;
+          payload.is_active = activeCheck.checked ? 1 : 0;
+
+          const ownerVal = ownerSelect.value.trim();
+          if (ownerVal) payload.owner_type = ownerVal;
+
+          // image handling
+          if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const dataUrl = await readFileAsDataURL(file);
+            payload.banner_image = dataUrl; // base64 data URL
+          } else if (clearCheck.checked) {
+            payload.banner_image = null;
+          }
+
+          // wallet options
+          const userIdRaw = userInput.value.trim();
+          const amountRaw = amountInput.value.trim();
+          const autoPrice = autoCheck.checked;
+
+          if (userIdRaw) {
+            payload.user_id = Number(userIdRaw);
+          }
+          if (amountRaw) {
+            payload.total_amount = Number(amountRaw);
+          }
+          if (autoPrice) {
+            payload.auto_price = true;
+          }
+
+          const API_BASE = getApiBase();
+          const url = API_BASE + "/banners/" + encodeURIComponent(banner.id);
+
+          const res = await fetch(url, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const json = await res.json();
+
+          if (!json.success) {
+            setMessage(json.message || "Failed to update banner.", "error");
+          } else {
+            setMessage(
+              json.message || `Banner #${banner.id} updated successfully.`,
+              "success"
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          setMessage("Error saving banner: " + err.message, "error");
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save Changes";
+        }
+      }
+    </script>
+  </body>
+</html>

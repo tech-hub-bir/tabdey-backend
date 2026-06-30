@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ride Request & Accept Demo</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      gap: 2rem;
+      padding: 1rem;
+      background: #f0f0f0;
+    }
+    .container {
+      flex: 1;
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    button {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .log {
+      margin-top: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #e8e8e8;
+      padding: 0.5rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="passenger-container">
+    <h2>Passenger</h2>
+    <p><strong>Default Ride Request Data:</strong></p>
+    <pre id="rideData">
+{
+  "rider_id": 2,
+  "pickup_lat": 27.4728,
+  "pickup_lng": 89.6397,
+  "dropoff_lat": 27.4900,
+  "dropoff_lng": 89.6500,
+  "pickup_address": "Thimphu City Center",
+  "dropoff_address": "Babesa",
+  "ride_type": "Grab Taxi",
+  "payment_method": "cash",
+  "distance_meters": 10,
+  "duration_seconds": 15,
+  "no_of_passenger": 1
+}
+    </pre>
+    <button id="requestRideBtn">Request Ride</button>
+    <div class="log" id="passengerLog"></div>
+  </div>
+
+  <div class="container" id="driver-container">
+    <h2>Driver</h2>
+    <p><strong>Waiting for ride requests...</strong></p>
+    <div id="rideRequestInfo"></div>
+    <button id="acceptRideBtn" style="display:none;">Accept Ride</button>
+    <div class="log" id="driverLog"></div>
+  </div>
+
+  <script>
+    const passengerLog = document.getElementById("passengerLog");
+    const driverLog = document.getElementById("driverLog");
+    const rideRequestInfo = document.getElementById("rideRequestInfo");
+    const acceptRideBtn = document.getElementById("acceptRideBtn");
+
+    const rider_id = 2;
+    const driver_user_id = 3;
+    let currentRideId = null;
+
+    const socket = io("http://localhost:7000");
+
+    socket.on("connect", () => {
+      logPassenger(`Socket connected: ${socket.id}`);
+      logDriver(`Socket connected: ${socket.id}`);
+
+      socket.emit("joinPersonalRoom", rider_id);
+      logPassenger(`Joined personal room: user_${rider_id}`);
+
+      socket.emit("joinDriverRoom", driver_user_id);
+      logDriver(`Joined driver room: driver_${driver_user_id}`);
+    });
+
+    function logPassenger(msg) {
+      passengerLog.textContent += msg + "\n";
+      passengerLog.scrollTop = passengerLog.scrollHeight;
+      console.log("[Passenger]", msg);
+    }
+
+    function logDriver(msg) {
+      driverLog.textContent += msg + "\n";
+      driverLog.scrollTop = driverLog.scrollHeight;
+      console.log("[Driver]", msg);
+    }
+
+    const rideRequestData = {
+      rider_id: 2,
+      pickup_lat: 27.4728,
+      pickup_lng: 89.6397,
+      dropoff_lat: 27.4900,
+      dropoff_lng: 89.6500,
+      pickup_address: "Thimphu City Center",
+      dropoff_address: "Babesa",
+      ride_type: "Grab Taxi",
+      payment_method: "cash",
+      distance_meters: 10,
+      duration_seconds: 15,
+      no_of_passenger: 1
+    };
+
+    document.getElementById("requestRideBtn").onclick = async () => {
+      logPassenger("Sending ride request to backend...");
+
+      try {
+        const response = await fetch("http://localhost:7000/api/rides/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rideRequestData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          logPassenger(`Ride request success: ${JSON.stringify(data)}`);
+          const ride_id = data.request_id;
+          currentRideId = ride_id;
+
+          // Emit to socket for driver's room
+          socket.emit("rideRequested", {
+            rider_id,
+            driver_id: driver_user_id,
+            ride_id,
+            pickup_address: rideRequestData.pickup_address,
+          });
+
+        } else {
+          logPassenger(`Ride request error: ${data.error || JSON.stringify(data)}`);
+        }
+      } catch (error) {
+        logPassenger(`Fetch error: ${error.message}`);
+      }
+    };
+
+    socket.on("newRideRequest", (data) => {
+      logDriver(`Received newRideRequest: ${JSON.stringify(data)}`);
+      rideRequestInfo.textContent = `Ride request from Rider ${data.rider_id}\nPickup: ${data.pickup_address}`;
+      currentRideId = data.ride_id;
+      acceptRideBtn.style.display = "inline-block";
+    });
+
+    acceptRideBtn.onclick = async () => {
+      if (!currentRideId) {
+        logDriver("No ride request to accept.");
+        return;
+      }
+
+      logDriver("Sending accept ride request to backend...");
+
+      const acceptData = {
+        ride_request_id: currentRideId,
+        driver_user_id,
+        passenger_id: rider_id,
+      };
+
+      try {
+        const response = await fetch("http://localhost:7000/api/riderequest/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(acceptData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          logDriver(`Ride accepted successfully: ${JSON.stringify(data)}`);
+          acceptRideBtn.style.display = "none";
+          rideRequestInfo.textContent = "Ride accepted!";
+        } else {
+          logDriver(`Accept ride error: ${data.message || JSON.stringify(data)}`);
+        }
+      } catch (error) {
+        logDriver(`Fetch error: ${error.message}`);
+      }
+    };
+
+    socket.on("rideAccepted", (data) => {
+      logPassenger(`Ride accepted by driver ${data.driver_id} (ride_id=${data.ride_id})`);
+
+      // Automatically join driver room now
+      const roomId = `driver_${data.driver_id}`;
+      socket.emit("joinDriverRoom", data.driver_id);
+      logPassenger(`Joined driver room: ${roomId}`);
+    });
+  </script>
+</body>
+</html>

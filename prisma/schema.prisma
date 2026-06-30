@@ -1,0 +1,2530 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model admin_collaborators {
+  collaborator_id BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  full_name       String    @db.VarChar(255)
+  contact         String    @db.VarChar(20)
+  email           String    @unique(map: "uniq_email") @db.VarChar(255)
+  service         String?   @db.VarChar(255)
+  role            String?   @db.VarChar(100)
+  current_address String?   @db.VarChar(255)
+  cid             String?   @unique(map: "uniq_cid") @db.VarChar(50)
+  created_at      DateTime  @default(now()) @db.DateTime(0)
+  updated_at      DateTime? @db.DateTime(0)
+
+  @@index([role], map: "idx_role")
+}
+
+model admin_logs {
+  log_id     BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt?  @db.UnsignedBigInt
+  admin_name String   @db.VarChar(255)
+  activity   String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  users      users?   @relation(fields: [user_id], references: [user_id], map: "fk_admin_logs_user")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model all_device_ids {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt   @unique(map: "uniq_user") @db.UnsignedBigInt
+  device_id  String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  last_seen  DateTime @default(now()) @db.DateTime(0)
+  users      users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_all_device_ids_user")
+
+  @@index([device_id], map: "idx_device_id")
+}
+
+model app_ratings {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id      BigInt?  @db.UnsignedBigInt
+  role         String?  @db.VarChar(50)
+  rating       Int
+  comment      String?  @db.Text
+  platform     String?  @db.VarChar(20)
+  os_version   String?  @db.VarChar(20)
+  app_version  String?  @db.VarChar(50)
+  device_model String?  @db.VarChar(255)
+  network_type String?  @db.VarChar(50)
+  created_at   DateTime @default(now()) @db.DateTime(0)
+  users        users?   @relation(fields: [user_id], references: [user_id], map: "fk_app_rating_user")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([rating], map: "idx_rating")
+  @@index([role], map: "idx_role")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model banners_base_prices {
+  banner_price_id BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  amount_per_day  Decimal  @default(0.00) @db.Decimal(10, 2)
+  created_at      DateTime @default(now()) @db.DateTime(0)
+  updated_at      DateTime @default(now()) @db.DateTime(0)
+}
+
+model bookings {
+  id             String                  @id @db.VarChar(50)
+  ticket_code    String                  @unique(map: "ticket_code") @db.VarChar(50)
+  user_id        BigInt                  @db.UnsignedBigInt
+  event_id       String                  @db.Char(36)
+  tier_id        String                  @db.Char(36)
+  quantity       Int
+  total_amount   Int
+  payment_method bookings_payment_method
+  attendee_names String                  @db.LongText
+  status         bookings_status         @default(confirmed)
+  created_at     DateTime                @default(now()) @db.Timestamp(0)
+  users          users                   @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "bookings_ibfk_1")
+  events         events                  @relation(fields: [event_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_2")
+  ticket_tiers   ticket_tiers            @relation(fields: [tier_id], references: [id], onUpdate: Restrict, map: "bookings_ibfk_3")
+
+  @@index([event_id], map: "event_id")
+  @@index([tier_id], map: "tier_id")
+  @@index([user_id], map: "user_id")
+}
+
+model business_banners {
+  id                        BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                      @db.UnsignedBigInt
+  title                     String?                     @db.VarChar(255)
+  description               String?                     @db.Text
+  banner_image              String?                     @db.VarChar(255)
+  is_active                 Boolean                     @default(true)
+  start_date                DateTime?                   @db.Date
+  end_date                  DateTime?                   @db.Date
+  owner_type                business_banners_owner_type
+  created_at                DateTime                    @default(now()) @db.DateTime(0)
+  updated_at                DateTime                    @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details   @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "business_banners_ibfk_1")
+
+  @@index([business_id, owner_type, created_at], map: "idx_business_owner_created")
+}
+
+model business_types {
+  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  name                    String                    @unique(map: "uk_name") @db.VarChar(100)
+  image                   String?                   @db.VarChar(255)
+  types                   String?                   @db.VarChar(255)
+  description             String?                   @db.Text
+  created_at              DateTime                  @default(now()) @db.DateTime(0)
+  updated_at              DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_types merchant_business_types[]
+}
+
+model cancellation_rules {
+  rule_id       Int                             @id @default(autoincrement())
+  cancelled_by  cancellation_rules_cancelled_by
+  ride_status   String                          @db.VarChar(50)
+  stage         String                          @db.VarChar(50)
+  fee_percent   Decimal                         @db.Decimal(5, 2)
+  min_fee_cents Int
+  max_fee_cents Int
+  is_free       Boolean?                        @default(false)
+  grace_minutes Int?
+  description   String?                         @db.Text
+  created_at    DateTime                        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime                        @default(now()) @db.Timestamp(0)
+}
+
+model cancelled_order_items {
+  cancelled_item_id BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id          String           @db.VarChar(12)
+  business_id       Int
+  business_name     String           @db.VarChar(255)
+  menu_id           Int
+  item_name         String           @db.VarChar(255)
+  item_image        String?          @db.VarChar(500)
+  quantity          Int              @default(1)
+  price             Decimal          @db.Decimal(10, 2)
+  subtotal          Decimal          @db.Decimal(10, 2)
+  created_at        DateTime         @default(now()) @db.Timestamp(0)
+  cancelled_orders  cancelled_orders @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_cancelled_items_order")
+
+  @@index([business_id], map: "idx_cancelled_items_biz")
+  @@index([order_id], map: "idx_cancelled_items_order")
+}
+
+model cancelled_orders {
+  cancelled_id              BigInt                                  @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id                  String                                  @unique(map: "uk_cancelled_order_id") @db.VarChar(12)
+  user_id                   Int
+  status                    String                                  @default("CANCELLED") @db.VarChar(100)
+  status_reason             String?                                 @db.VarChar(255)
+  total_amount              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  discount_amount           Decimal?                                @default(0.00) @db.Decimal(10, 2)
+  delivery_fee              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  platform_fee              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  merchant_delivery_fee     Decimal?                                @db.Decimal(10, 2)
+  payment_method            cancelled_orders_payment_method
+  delivery_address          String                                  @db.VarChar(500)
+  note_for_restaurant       String?                                 @db.VarChar(500)
+  if_unavailable            String?                                 @db.VarChar(256)
+  fulfillment_type          cancelled_orders_fulfillment_type?      @default(Delivery)
+  priority                  Boolean?                                @default(false)
+  estimated_arrivial_time   String?                                 @db.VarChar(40)
+  cancelled_by              cancelled_orders_cancelled_by           @default(USER)
+  cancelled_at              DateTime                                @default(now()) @db.Timestamp(0)
+  original_created_at       DateTime?                               @db.Timestamp(0)
+  original_updated_at       DateTime?                               @db.Timestamp(0)
+  delivery_floor_unit       String?                                 @db.VarChar(80)
+  delivery_instruction_note String?                                 @db.VarChar(256)
+  delivery_photo_url        String?                                 @db.Text
+  delivery_special_mode     cancelled_orders_delivery_special_mode?
+  cancelled_order_items     cancelled_order_items[]
+
+  @@index([cancelled_at], map: "idx_cancelled_time")
+  @@index([user_id], map: "idx_cancelled_user")
+}
+
+model contact_messages {
+  id            BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  full_name     String                        @db.VarChar(255)
+  contact_type  contact_messages_contact_type @default(email)
+  contact_value String                        @db.VarChar(255)
+  user_type     String?                       @db.VarChar(100)
+  message       String                        @db.Text
+  status        contact_messages_status?      @default(new)
+  created_at    DateTime                      @default(now()) @db.DateTime(0)
+  updated_at    DateTime?                     @db.DateTime(0)
+
+  @@index([contact_type], map: "idx_contact_type")
+  @@index([created_at], map: "idx_created_at")
+  @@index([status], map: "idx_status")
+  @@index([user_type], map: "idx_user_type")
+}
+
+model delivered_order_items {
+  delivered_item_id BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id          String           @db.VarChar(12)
+  business_id       Int
+  business_name     String           @db.VarChar(255)
+  menu_id           Int
+  item_name         String           @db.VarChar(255)
+  item_image        String?          @db.VarChar(500)
+  quantity          Int              @default(1)
+  price             Decimal          @db.Decimal(10, 2)
+  subtotal          Decimal          @db.Decimal(10, 2)
+  platform_fee      Decimal?         @default(0.00) @db.Decimal(10, 2)
+  delivery_fee      Decimal?         @default(0.00) @db.Decimal(10, 2)
+  created_at        DateTime         @default(now()) @db.Timestamp(0)
+  delivered_orders  delivered_orders @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_delivered_items_order")
+
+  @@index([business_id], map: "idx_delivered_items_biz")
+  @@index([order_id], map: "idx_delivered_items_order")
+}
+
+model delivered_orders {
+  delivered_id              BigInt                                  @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id                  String                                  @unique(map: "uk_delivered_order_id") @db.VarChar(12)
+  user_id                   Int
+  service_type              delivered_orders_service_type           @default(FOOD)
+  status                    String                                  @default("COMPLETED") @db.VarChar(100)
+  status_reason             String?                                 @db.VarChar(255)
+  total_amount              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  discount_amount           Decimal?                                @default(0.00) @db.Decimal(10, 2)
+  delivery_fee              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  platform_fee              Decimal                                 @default(0.00) @db.Decimal(10, 2)
+  merchant_delivery_fee     Decimal?                                @db.Decimal(10, 2)
+  payment_method            delivered_orders_payment_method
+  delivery_address          String                                  @db.VarChar(500)
+  note_for_restaurant       String?                                 @db.VarChar(500)
+  if_unavailable            String?                                 @db.VarChar(256)
+  fulfillment_type          delivered_orders_fulfillment_type?      @default(Delivery)
+  priority                  Boolean?                                @default(false)
+  estimated_arrivial_time   String?                                 @db.VarChar(40)
+  delivered_by              delivered_orders_delivered_by           @default(SYSTEM)
+  delivered_at              DateTime                                @default(now()) @db.Timestamp(0)
+  delivery_batch_id         BigInt?                                 @db.UnsignedBigInt
+  delivery_driver_id        Int?
+  delivery_status           delivered_orders_delivery_status        @default(DELIVERED)
+  delivery_ride_id          BigInt?
+  original_created_at       DateTime?                               @db.Timestamp(0)
+  original_updated_at       DateTime?                               @db.Timestamp(0)
+  delivery_floor_unit       String?                                 @db.VarChar(80)
+  delivery_instruction_note String?                                 @db.VarChar(256)
+  delivery_photo_url        String?                                 @db.Text
+  delivery_special_mode     delivered_orders_delivery_special_mode?
+  delivered_order_items     delivered_order_items[]
+
+  @@index([service_type, original_created_at], map: "idx_delivered_service_created")
+  @@index([delivered_at], map: "idx_delivered_time")
+  @@index([user_id], map: "idx_delivered_user")
+}
+
+model delivery_batches {
+  batch_id           BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  merchant_id        Int
+  driver_id          Int?
+  ride_id            BigInt?
+  status             delivery_batches_status @default(forming)
+  total_orders       Int                     @default(0)
+  created_at         DateTime                @default(now()) @db.DateTime(0)
+  assigned_at        DateTime?               @db.DateTime(0)
+  picked_up_at       DateTime?               @db.DateTime(0)
+  completed_at       DateTime?               @db.DateTime(0)
+  assigned_driver_id BigInt?                 @db.UnsignedBigInt
+  city_id            String?                 @db.VarChar(64)
+  pickup_lat         Float?
+  pickup_lng         Float?
+  pickup_place       String?                 @db.VarChar(255)
+  metadata           String?                 @db.LongText
+  updated_at         DateTime                @default(now()) @db.DateTime(0)
+  drivers            drivers?                @relation(fields: [assigned_driver_id], references: [driver_id], map: "fk_db_assigned_driver")
+  delivery_drops     delivery_drops[]
+  order_items        order_items[]
+
+  @@index([assigned_driver_id], map: "fk_db_assigned_driver")
+}
+
+model delivery_drops {
+  drop_id               BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  batch_id              BigInt                @db.UnsignedBigInt
+  ride_id               BigInt                @db.UnsignedBigInt
+  seq                   Int
+  order_id              String?               @db.VarChar(128)
+  user_id               BigInt?               @db.UnsignedBigInt
+  lat                   Float
+  lng                   Float
+  address               String?               @db.VarChar(512)
+  amount_cents          Int                   @default(0) @db.UnsignedInt
+  delivery_fee_cents    Int                   @default(0) @db.UnsignedInt
+  platform_fee_cents    Int                   @default(0) @db.UnsignedInt
+  cash_to_collect_cents Int                   @default(0) @db.UnsignedInt
+  status                delivery_drops_status @default(pending)
+  assigned_at           DateTime?             @db.DateTime(0)
+  completed_at          DateTime?             @db.DateTime(0)
+  created_at            DateTime              @default(now()) @db.DateTime(0)
+  delivery_batches      delivery_batches      @relation(fields: [batch_id], references: [batch_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_dd_batch")
+  rides                 rides                 @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_dd_ride")
+
+  @@index([ride_id], map: "fk_dd_ride")
+  @@index([batch_id, seq], map: "idx_batch_seq")
+  @@index([batch_id, status], map: "idx_batch_status")
+}
+
+model driver_adjustments {
+  adj_id       BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id    BigInt                  @db.UnsignedBigInt
+  ride_id      BigInt?                 @db.UnsignedBigInt
+  type         driver_adjustments_type
+  amount_cents Int
+  currency     String                  @default("BTN") @db.Char(3)
+  meta_json    String?                 @db.LongText
+  created_at   DateTime                @default(now()) @db.Timestamp(0)
+  drivers      drivers                 @relation(fields: [driver_id], references: [driver_id], map: "fk_da_driver")
+  rides        rides?                  @relation(fields: [ride_id], references: [ride_id], map: "fk_da_ride")
+
+  @@index([driver_id, created_at], map: "idx_driver_date")
+  @@index([ride_id], map: "idx_ride")
+}
+
+model driver_devices {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  device_id  String    @db.VarChar(255)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+  users      users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "driver_devices_ibfk_1")
+
+  @@unique([user_id, device_id], map: "unique_driver_device")
+}
+
+model driver_documents {
+  document_id         BigInt                                @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id           BigInt                                @db.UnsignedBigInt
+  document_type       driver_documents_document_type
+  document_url        String                                @db.VarChar(255)
+  verification_status driver_documents_verification_status? @default(pending)
+  uploaded_at         DateTime?                             @default(now()) @db.Timestamp(0)
+  verified_at         DateTime?                             @db.Timestamp(0)
+  verified_by         BigInt?                               @db.UnsignedBigInt
+  metadata            String?                               @db.LongText
+  drivers             drivers                               @relation(fields: [driver_id], references: [driver_id], onDelete: Cascade, onUpdate: Restrict, map: "driver_documents_ibfk_1")
+
+  @@index([document_type], map: "document_type")
+  @@index([driver_id], map: "driver_id")
+  @@index([verification_status], map: "verification_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model driver_earnings {
+  earning_id      BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id       BigInt   @db.UnsignedBigInt
+  ride_id         BigInt   @db.UnsignedBigInt
+  base_fare_cents Int      @default(0) @db.UnsignedInt
+  time_cents      Int      @default(0) @db.UnsignedInt
+  tips_cents      Int      @default(0) @db.UnsignedInt
+  currency        String   @default("BTN") @db.Char(3)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @default(now()) @db.Timestamp(0)
+  payment_method  String?  @db.VarChar(20)
+  drivers         drivers  @relation(fields: [driver_id], references: [driver_id], map: "fk_de_driver")
+  rides           rides    @relation(fields: [ride_id], references: [ride_id], map: "fk_de_ride")
+
+  @@unique([driver_id, ride_id], map: "uniq_driver_ride")
+  @@index([payment_method], map: "idx_de_payment_method")
+  @@index([driver_id], map: "idx_driver")
+  @@index([payment_method], map: "idx_payment_method")
+  @@index([ride_id], map: "idx_ride")
+}
+
+model driver_locations {
+  id          BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id   BigInt               @db.UnsignedBigInt
+  loc         Unsupported("point")
+  recorded_at DateTime?            @default(now()) @db.Timestamp(0)
+  drivers     drivers              @relation(fields: [driver_id], references: [driver_id], onUpdate: Restrict, map: "driver_locations_ibfk_1")
+
+  @@index([driver_id], map: "driver_id")
+}
+
+model driver_vehicles {
+  vehicle_id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id          BigInt    @db.UnsignedBigInt
+  make               String    @db.VarChar(50)
+  model              String    @db.VarChar(50)
+  year               Int       @db.UnsignedSmallInt
+  color              String    @db.VarChar(30)
+  license_plate      String    @unique(map: "license_plate") @db.VarChar(20)
+  vehicle_type       String    @db.VarChar(20)
+  is_approved        Boolean?  @default(false)
+  actual_capacity    Int?      @default(0) @db.UnsignedInt
+  available_capacity Int?      @default(0) @db.UnsignedInt
+  features           String?   @db.VarChar(255)
+  insurance_expiry   DateTime? @db.Date
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @db.Timestamp(0)
+  code               String?   @db.VarChar(64)
+  drivers            drivers   @relation(fields: [driver_id], references: [driver_id], onDelete: Cascade, onUpdate: Restrict, map: "driver_vehicles_ibfk_1")
+
+  @@index([driver_id], map: "driver_id")
+  @@index([is_approved], map: "is_approved")
+  @@index([vehicle_type], map: "vehicle_type")
+}
+
+model drivers {
+  driver_id                   BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                     BigInt?                  @unique(map: "user_id") @db.UnsignedBigInt
+  license_number              String                   @unique(map: "license_number") @db.VarChar(50)
+  license_expiry              DateTime                 @db.Date
+  is_approved                 Boolean?                 @default(false)
+  approval_status             drivers_approval_status? @default(pending)
+  approved_at                 DateTime?                @db.Timestamp(0)
+  rejection_reason            String?                  @db.Text
+  rating                      Decimal?                 @default(0.00) @db.Decimal(3, 2)
+  total_rides                 Int?                     @default(0) @db.UnsignedInt
+  is_online                   Boolean?                 @default(false)
+  current_location            Unsupported("point")
+  current_location_updated_at DateTime?                @db.Timestamp(0)
+  created_at                  DateTime?                @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime?                @default(now()) @db.Timestamp(0)
+  delivery_batches            delivery_batches[]
+  driver_adjustments          driver_adjustments[]
+  driver_documents            driver_documents[]
+  driver_earnings             driver_earnings[]
+  driver_locations            driver_locations[]
+  driver_vehicles             driver_vehicles[]
+  users                       users?                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "drivers_ibfk_1")
+  platform_levies             platform_levies[]
+  ride_bookings               ride_bookings[]
+  ride_ratings                ride_ratings[]
+  ride_tips                   ride_tips[]
+  rides                       rides[]
+
+  @@index([approval_status], map: "approval_status")
+  @@index([current_location(length: 32)], map: "current_location")
+  @@index([is_online], map: "is_online")
+}
+
+model event_banners {
+  id         String                  @id @db.Char(36)
+  title      String                  @db.VarChar(255)
+  subtitle   String?                 @db.VarChar(255)
+  image_url  String                  @db.VarChar(500)
+  link_type  event_banners_link_type @default(event)
+  link_id    String?                 @db.VarChar(100)
+  link_url   String?                 @db.VarChar(500)
+  is_active  Boolean                 @default(true)
+  sort_order Int                     @default(0)
+  created_at DateTime                @default(now()) @db.Timestamp(0)
+}
+
+model event_booking_seats {
+  booking_id       String            @db.VarChar(50)
+  seat_id          String            @db.Char(36)
+  event_id         String            @db.Char(36)
+  screening_id     String?           @db.Char(36)
+  event_screenings event_screenings? @relation(fields: [screening_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "bs_ibfk_screening")
+  event_bookings   event_bookings    @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_booking_seats_ibfk_1")
+  event_seats      event_seats       @relation(fields: [seat_id], references: [id], onUpdate: Restrict, map: "event_booking_seats_ibfk_2")
+  events           events            @relation(fields: [event_id], references: [id], onUpdate: Restrict, map: "event_booking_seats_ibfk_3")
+
+  @@id([booking_id, seat_id])
+  @@index([event_id], map: "event_id")
+  @@index([screening_id], map: "idx_bs_screening")
+  @@index([seat_id], map: "seat_id")
+}
+
+model event_bookings {
+  id                  String                        @id @db.VarChar(50)
+  ticket_code         String                        @unique(map: "ticket_code") @db.VarChar(50)
+  user_id             BigInt                        @db.UnsignedBigInt
+  event_id            String                        @db.Char(36)
+  screening_id        String?                       @db.Char(36)
+  tier_id             String                        @db.Char(36)
+  quantity            Int
+  total_amount        Int
+  payment_method      event_bookings_payment_method
+  attendee_names      String                        @db.LongText
+  status              event_bookings_status         @default(confirmed)
+  payment_status      event_bookings_payment_status @default(paid)
+  wallet_journal_code String?                       @db.VarChar(36)
+  created_at          DateTime                      @default(now()) @db.Timestamp(0)
+  checked_in_at       DateTime?                     @db.Timestamp(0)
+  event_booking_seats event_booking_seats[]
+  event_screenings    event_screenings?             @relation(fields: [screening_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "b_ibfk_screening")
+  users               users                         @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "event_bookings_ibfk_1")
+  events              events                        @relation(fields: [event_id], references: [id], onUpdate: Restrict, map: "event_bookings_ibfk_2")
+  event_ticket_tiers  event_ticket_tiers            @relation(fields: [tier_id], references: [id], onUpdate: Restrict, map: "event_bookings_ibfk_3")
+
+  @@index([event_id], map: "event_id")
+  @@index([screening_id], map: "idx_b_screening")
+  @@index([tier_id], map: "tier_id")
+  @@index([user_id], map: "user_id")
+}
+
+model event_halls {
+  id               String             @id @db.Char(36)
+  venue_name       String             @db.VarChar(255)
+  name             String             @db.VarChar(100)
+  total_seats      Int                @default(0)
+  created_at       DateTime           @default(now()) @db.Timestamp(0)
+  has_balcony      Boolean            @default(false)
+  organizer_id     String?            @db.Char(36)
+  event_organizers event_organizers?  @relation(fields: [organizer_id], references: [id], onUpdate: Restrict, map: "halls_ibfk_organizer")
+  event_screenings event_screenings[]
+  event_seats      event_seats[]
+
+  @@index([organizer_id], map: "halls_ibfk_organizer")
+}
+
+model event_organizers {
+  id                      String                   @id @db.Char(36)
+  name                    String                   @db.VarChar(255)
+  created_at              DateTime                 @default(now()) @db.Timestamp(0)
+  user_id                 BigInt?                  @unique(map: "uq_organizers_user_id") @db.UnsignedBigInt
+  event_halls             event_halls[]
+  users                   users?                   @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "organizers_ibfk_user")
+  events                  events[]
+  organizer_revenue_share organizer_revenue_share?
+}
+
+model event_payment_sessions {
+  id              String                        @id @db.Char(36)
+  user_id         BigInt                        @db.UnsignedBigInt
+  order_no        String                        @unique(map: "uq_order_no") @db.VarChar(50)
+  bfs_txn_id      String?                       @db.VarChar(50)
+  amount          Decimal                       @db.Decimal(10, 2)
+  payment_context String                        @db.LongText
+  status          event_payment_sessions_status @default(pending)
+  created_at      DateTime                      @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                      @default(now()) @db.Timestamp(0)
+  users           users                         @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "event_payment_sessions_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model event_review_helpful {
+  review_id     String        @db.Char(36)
+  user_id       BigInt        @db.UnsignedBigInt
+  created_at    DateTime      @default(now()) @db.Timestamp(0)
+  event_reviews event_reviews @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_review_helpful_ibfk_1")
+  users         users         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "event_review_helpful_ibfk_2")
+
+  @@id([review_id, user_id])
+  @@index([user_id], map: "user_id")
+}
+
+model event_reviews {
+  id                   String                 @id @db.Char(36)
+  event_id             String                 @db.Char(36)
+  user_id              BigInt                 @db.UnsignedBigInt
+  rating               Int                    @db.TinyInt
+  comment              String?                @db.Text
+  created_at           DateTime               @default(now()) @db.Timestamp(0)
+  event_review_helpful event_review_helpful[]
+  events               events                 @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_reviews_ibfk_1")
+  users                users                  @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "event_reviews_ibfk_2")
+
+  @@unique([event_id, user_id], map: "uq_review")
+  @@index([user_id], map: "user_id")
+}
+
+model event_screenings {
+  id                  String                  @id @db.Char(36)
+  event_id            String                  @db.Char(36)
+  hall_id             String                  @db.Char(36)
+  show_date           DateTime                @db.Date
+  show_time           DateTime                @db.Time(0)
+  status              event_screenings_status @default(active)
+  created_at          DateTime                @default(now()) @db.Timestamp(0)
+  event_booking_seats event_booking_seats[]
+  event_bookings      event_bookings[]
+  events              events                  @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_screenings_ibfk_1")
+  event_halls         event_halls             @relation(fields: [hall_id], references: [id], onUpdate: Restrict, map: "event_screenings_ibfk_2")
+  event_seat_holds    event_seat_holds[]
+
+  @@index([event_id], map: "event_id")
+  @@index([hall_id], map: "hall_id")
+}
+
+model event_seat_holds {
+  id               String            @id @db.Char(36)
+  event_id         String?           @db.Char(36)
+  screening_id     String?           @db.Char(36)
+  seat_id          String            @db.Char(36)
+  user_id          BigInt            @db.UnsignedBigInt
+  expires_at       DateTime          @db.DateTime(0)
+  created_at       DateTime          @default(now()) @db.Timestamp(0)
+  event_seats      event_seats       @relation(fields: [seat_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_seat_holds_ibfk_2")
+  users            users             @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "event_seat_holds_ibfk_3")
+  events           events?           @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_seat_holds_ibfk_event")
+  event_screenings event_screenings? @relation(fields: [screening_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_seat_holds_ibfk_screening")
+
+  @@unique([screening_id, seat_id], map: "uq_cinema_hold")
+  @@unique([event_id, seat_id], map: "uq_general_hold")
+  @@index([screening_id], map: "idx_sh_screening")
+  @@index([seat_id], map: "seat_id")
+  @@index([user_id], map: "user_id")
+}
+
+model event_seats {
+  id                  String                @id @db.Char(36)
+  hall_id             String                @db.Char(36)
+  row_label           String                @db.VarChar(5)
+  seat_number         Int                   @db.UnsignedSmallInt
+  column_position     Int                   @db.UnsignedTinyInt
+  section             event_seats_section   @default(main)
+  category            event_seats_category  @default(regular)
+  event_booking_seats event_booking_seats[]
+  event_seat_holds    event_seat_holds[]
+  event_halls         event_halls           @relation(fields: [hall_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_seats_ibfk_1")
+
+  @@unique([hall_id, section, row_label, seat_number], map: "uq_seat")
+  @@index([hall_id], map: "idx_hall_id")
+}
+
+model event_ticket_tiers {
+  id              String           @id @db.Char(36)
+  event_id        String           @db.Char(36)
+  name            String           @db.VarChar(100)
+  description     String?          @db.VarChar(255)
+  price           Int
+  available_seats Int              @default(0)
+  event_bookings  event_bookings[]
+  events          events           @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_ticket_tiers_ibfk_1")
+
+  @@index([event_id], map: "event_id")
+}
+
+model event_wishlists {
+  user_id    BigInt   @db.UnsignedBigInt
+  event_id   String   @db.Char(36)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  users      users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "event_wishlists_ibfk_1")
+  events     events   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "event_wishlists_ibfk_2")
+
+  @@id([user_id, event_id])
+  @@index([event_id], map: "event_id")
+}
+
+model events {
+  id                  String                @id @db.Char(36)
+  title               String                @db.VarChar(255)
+  category            events_category
+  city                String                @db.VarChar(100)
+  venue_name          String                @db.VarChar(255)
+  venue_address       String?               @db.VarChar(255)
+  organizer_name      String?               @db.VarChar(255)
+  organizer_id        String?               @db.Char(36)
+  cover_image         String?               @db.VarChar(500)
+  description         String?               @db.Text
+  start_at            DateTime              @db.DateTime(0)
+  end_at              DateTime              @db.DateTime(0)
+  is_live             Boolean?              @default(false)
+  avg_rating          Decimal?              @default(0.00) @db.Decimal(3, 2)
+  total_reviews       Int?                  @default(0)
+  created_at          DateTime              @default(now()) @db.Timestamp(0)
+  bookings            bookings[]
+  event_booking_seats event_booking_seats[]
+  event_bookings      event_bookings[]
+  event_reviews       event_reviews[]
+  event_screenings    event_screenings[]
+  event_seat_holds    event_seat_holds[]
+  event_ticket_tiers  event_ticket_tiers[]
+  event_wishlists     event_wishlists[]
+  event_organizers    event_organizers?     @relation(fields: [organizer_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "events_ibfk_1")
+  reviews             reviews[]
+  ticket_tiers        ticket_tiers[]
+  wishlists           wishlists[]
+
+  @@index([organizer_id], map: "organizer_id")
+}
+
+model food_category {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  category_name  String   @unique(map: "uk_category_name") @db.VarChar(100)
+  business_type  String?  @db.VarChar(100)
+  description    String?  @db.Text
+  created_at     DateTime @default(now()) @db.DateTime(0)
+  updated_at     DateTime @default(now()) @db.DateTime(0)
+  category_image String?  @db.Text
+}
+
+model food_mart_revenue {
+  revenue_id     BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id       String                       @unique(map: "uk_food_mart_revenue_order") @db.VarChar(12)
+  user_id        Int
+  business_id    Int
+  owner_type     food_mart_revenue_owner_type
+  source         food_mart_revenue_source     @default(delivered)
+  status         String?                      @db.VarChar(100)
+  placed_at      DateTime?                    @db.Timestamp(0)
+  payment_method String?                      @db.VarChar(16)
+  total_amount   Decimal                      @default(0.00) @db.Decimal(10, 2)
+  platform_fee   Decimal                      @default(0.00) @db.Decimal(10, 2)
+  revenue_earned Decimal                      @default(0.00) @db.Decimal(10, 2)
+  tax            Decimal                      @default(0.00) @db.Decimal(10, 2)
+  customer_name  String?                      @db.VarChar(255)
+  customer_phone String?                      @db.VarChar(64)
+  business_name  String?                      @db.VarChar(255)
+  items_summary  String?                      @db.Text
+  total_quantity Int                          @default(0)
+  details_json   String?                      @db.LongText
+  created_at     DateTime?                    @default(now()) @db.Timestamp(0)
+
+  @@index([business_id, placed_at], map: "idx_fmr_biz_time")
+  @@index([owner_type, placed_at], map: "idx_fmr_owner_time")
+  @@index([source, placed_at], map: "idx_fmr_source_time")
+  @@index([user_id, placed_at], map: "idx_fmr_user_time")
+}
+
+model food_menu {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  category_name             String                    @db.VarChar(100)
+  item_name                 String                    @db.VarChar(255)
+  description               String?                   @db.Text
+  item_image                String?                   @db.VarChar(255)
+  actual_price              Decimal                   @default(0.00) @db.Decimal(10, 2)
+  discount_percentage       Decimal                   @default(0.00) @db.Decimal(5, 2)
+  tax_rate                  Decimal                   @default(0.00) @db.Decimal(5, 2)
+  is_veg                    Boolean                   @default(false)
+  spice_level               food_menu_spice_level     @default(None)
+  is_available              Boolean                   @default(true)
+  stock_limit               Int                       @default(0)
+  sort_order                Int                       @default(0)
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "food_menu_ibfk_1")
+
+  @@unique([business_id, category_name, item_name], map: "uk_foodmenu_biz_cat_name")
+  @@index([is_available], map: "idx_food_menu_available")
+  @@index([business_id], map: "idx_food_menu_business")
+  @@index([category_name], map: "idx_food_menu_cat")
+}
+
+model food_ratings {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  user_id                   BigInt                    @db.UnsignedBigInt
+  rating                    Int                       @db.UnsignedTinyInt
+  comment                   String?                   @db.Text
+  likes_count               Int                       @default(0)
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "fk_fr_business")
+  users                     users                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "fk_fr_user")
+
+  @@index([business_id], map: "idx_fr_business")
+  @@index([rating], map: "idx_fr_rating")
+  @@index([user_id], map: "idx_fr_user")
+}
+
+model idempotency_keys {
+  idem_key     String   @id @db.VarChar(255)
+  purpose      String   @db.VarChar(64)
+  ride_id      BigInt?  @db.UnsignedBigInt
+  booking_id   BigInt?  @db.UnsignedBigInt
+  passenger_id BigInt?  @db.UnsignedBigInt
+  amount_cents Int      @db.UnsignedInt
+  journal_code String?  @db.VarChar(64)
+  created_at   DateTime @default(now()) @db.DateTime(0)
+}
+
+model image_and_icons {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique(map: "unique_image_icon_name") @db.VarChar(255)
+  image_url    String   @db.VarChar(500)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+  updated_at   DateTime @default(now()) @db.Timestamp(0)
+  service_type String?  @db.VarChar(100)
+}
+
+model inter_city_fares {
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  from_city    String  @db.VarChar(100)
+  to_city      String  @db.VarChar(100)
+  reserve_fare Decimal @default(0.00) @db.Decimal(10, 2)
+  share_fare   Decimal @default(0.00) @db.Decimal(10, 2)
+
+  @@unique([from_city, to_city], map: "uq_inter_city_route")
+}
+
+model intra_city_fares {
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  from_zone    String  @db.VarChar(100)
+  to_zone      String  @db.VarChar(100)
+  reserve_fare Decimal @default(0.00) @db.Decimal(10, 2)
+  share_fare   Decimal @default(0.00) @db.Decimal(10, 2)
+  is_share     Boolean @default(false)
+
+  @@unique([from_zone, to_zone], map: "uq_intra_city_route")
+}
+
+model mart_category {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  category_name  String   @unique(map: "uk_category_name") @db.VarChar(100)
+  business_type  String?  @db.VarChar(100)
+  description    String?  @db.Text
+  created_at     DateTime @default(now()) @db.DateTime(0)
+  updated_at     DateTime @default(now()) @db.DateTime(0)
+  category_image String?  @db.Text
+}
+
+model mart_menu {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  category_name             String                    @db.VarChar(100)
+  item_name                 String                    @db.VarChar(255)
+  description               String?                   @db.Text
+  item_image                String?                   @db.VarChar(255)
+  actual_price              Decimal                   @default(0.00) @db.Decimal(10, 2)
+  discount_percentage       Decimal                   @default(0.00) @db.Decimal(5, 2)
+  tax_rate                  Decimal                   @default(0.00) @db.Decimal(5, 2)
+  is_veg                    Boolean                   @default(false)
+  spice_level               mart_menu_spice_level     @default(None)
+  is_available              Boolean                   @default(true)
+  stock_limit               Int                       @default(0)
+  sort_order                Int                       @default(0)
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "mart_menu_ibfk_1")
+  mart_product_info         mart_product_info?
+
+  @@unique([business_id, category_name, item_name], map: "uk_martmenu_biz_cat_name")
+  @@index([is_available], map: "idx_mart_menu_available")
+  @@index([business_id], map: "idx_mart_menu_business")
+  @@index([category_name], map: "idx_mart_menu_cat")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model mart_product_info {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  menu_id         BigInt    @unique(map: "menu_id") @db.UnsignedBigInt
+  size_standard   String?   @db.VarChar(50)
+  available_sizes String?   @db.VarChar(500)
+  product_images  String?   @db.VarChar(2000)
+  created_at      DateTime  @default(now()) @db.DateTime(0)
+  updated_at      DateTime  @default(now()) @db.DateTime(0)
+  mart_menu       mart_menu @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mart_product_info_ibfk_1")
+
+  @@index([menu_id], map: "idx_menu_id")
+}
+
+model mart_ratings {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  user_id                   BigInt                    @db.UnsignedBigInt
+  rating                    Int                       @db.UnsignedTinyInt
+  comment                   String?                   @db.Text
+  likes_count               Int                       @default(0)
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "fk_mr_business")
+  users                     users                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "fk_mr_user")
+
+  @@index([business_id], map: "idx_mr_business")
+  @@index([rating], map: "idx_mr_rating")
+  @@index([user_id], map: "idx_mr_user")
+}
+
+model merchant_bank_details {
+  bank_id                   BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                   BigInt                     @db.UnsignedBigInt
+  business_id               BigInt?                    @db.UnsignedBigInt
+  bank_name                 String                     @db.VarChar(255)
+  account_holder_name       String                     @db.VarChar(255)
+  account_number            String                     @db.VarChar(50)
+  bank_qr_code_image        String?                    @db.Text
+  created_at                DateTime                   @default(now()) @db.DateTime(0)
+  updated_at                DateTime                   @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "fk_mbd_business")
+  users                     users                      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "fk_mbd_user")
+
+  @@index([business_id], map: "idx_mbd_business")
+  @@index([user_id], map: "idx_mbd_user")
+}
+
+model merchant_business_details {
+  business_id                             BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                                 BigInt                    @db.UnsignedBigInt
+  owner_type                              String?                   @db.VarChar(50)
+  business_name                           String                    @db.VarChar(255)
+  business_license_number                 String?                   @db.VarChar(100)
+  license_image                           String?                   @db.VarChar(255)
+  latitude                                Decimal?                  @db.Decimal(10, 7)
+  longitude                               Decimal?                  @db.Decimal(10, 7)
+  address                                 String?                   @db.Text
+  business_logo                           String?                   @db.VarChar(255)
+  delivery_option                         String?                   @db.VarChar(50)
+  complementary                           String?                   @db.VarChar(100)
+  complementary_details                   String?                   @db.Text
+  opening_time                            DateTime?                 @db.Time(0)
+  closing_time                            DateTime?                 @db.Time(0)
+  kitchen_closing_time                    DateTime?                 @db.Time(0)
+  holidays                                String?                   @db.LongText
+  created_at                              DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                              DateTime                  @default(now()) @db.DateTime(0)
+  min_amount_for_fd                       Decimal?                  @db.Decimal(10, 2)
+  special_celebration                     String?                   @db.VarChar(255)
+  special_celebration_discount_percentage Decimal?                  @default(0.00) @db.Decimal(5, 2)
+  business_banners                        business_banners[]
+  food_menu                               food_menu[]
+  food_ratings                            food_ratings[]
+  mart_menu                               mart_menu[]
+  mart_ratings                            mart_ratings[]
+  merchant_bank_details                   merchant_bank_details[]
+  users                                   users                     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "merchant_business_details_ibfk_1")
+  merchant_business_types                 merchant_business_types[]
+  merchant_earnings                       merchant_earnings[]
+
+  @@index([user_id], map: "user_id")
+}
+
+model merchant_business_types {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  business_type_id          BigInt                    @db.UnsignedBigInt
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "merchant_business_types_ibfk_1")
+  business_types            business_types            @relation(fields: [business_type_id], references: [id], onDelete: Cascade, map: "merchant_business_types_ibfk_2")
+
+  @@index([business_id], map: "business_id")
+  @@index([business_type_id], map: "business_type_id")
+}
+
+model merchant_earnings {
+  id                        BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  business_id               BigInt                    @db.UnsignedBigInt
+  date                      DateTime                  @db.Date
+  total_amount              Decimal                   @default(0.00) @db.Decimal(10, 2)
+  order_id                  String                    @unique(map: "uniq_merchant_earnings_order_id") @db.VarChar(50)
+  created_at                DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                DateTime                  @default(now()) @db.DateTime(0)
+  merchant_business_details merchant_business_details @relation(fields: [business_id], references: [business_id], onDelete: Cascade, map: "fk_me_business")
+
+  @@index([business_id, date], map: "idx_me_business_date")
+  @@index([order_id], map: "idx_me_order")
+}
+
+model notification_logs {
+  id      Int      @id @default(autoincrement())
+  user_id Int
+  title   String   @db.VarChar(255)
+  body    String   @db.Text
+  data    String?  @db.LongText
+  status  String   @db.VarChar(50)
+  sent_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([sent_at])
+  @@index([status])
+  @@index([user_id])
+}
+
+model notifications {
+  id         BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt                @db.UnsignedBigInt
+  type       String                @db.VarChar(50)
+  title      String                @db.VarChar(100)
+  message    String                @db.Text
+  data       String?               @db.LongText
+  status     notifications_status? @default(unread)
+  created_at DateTime?             @default(now()) @db.Timestamp(0)
+
+  @@index([user_id], map: "idx_user_id")
+}
+
+model offer_redemptions {
+  id          Int      @id @default(autoincrement())
+  offer_id    Int
+  user_id     String   @db.VarChar(50)
+  ride_id     String   @db.VarChar(50)
+  redeemed_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([offer_id, user_id], map: "idx_offer_user")
+}
+
+model offers {
+  id                   Int                   @id @default(autoincrement())
+  title                String                @db.VarChar(255)
+  sub                  String                @db.Text
+  icon                 String?               @default("ticket-percent-outline") @db.VarChar(100)
+  cta                  String?               @default("View offers") @db.VarChar(100)
+  imageUrl             String?               @db.VarChar(500)
+  tint                 String?               @default("rgba(0,177,79,0.10)") @db.VarChar(50)
+  category             String?               @default("for_you") @db.VarChar(50)
+  promoCode            String?               @db.VarChar(50)
+  deepLink             String?               @db.VarChar(255)
+  startDate            DateTime              @default(now()) @db.DateTime(0)
+  expiryDate           DateTime              @db.DateTime(0)
+  active               Boolean?              @default(true)
+  for_all              Boolean?              @default(false)
+  applicableTiers      String?               @db.LongText
+  applicableLocations  String?               @db.LongText
+  user_segment         String?               @db.LongText
+  user_id              String?               @db.VarChar(50)
+  createdAt            DateTime              @default(now()) @db.Timestamp(0)
+  updatedAt            DateTime              @default(now()) @db.Timestamp(0)
+  max_uses_per_user    Int?                  @default(1)
+  max_uses_total       Int?
+  current_uses_total   Int?                  @default(0)
+  discount_type        offers_discount_type? @default(percentage)
+  discount_value       Decimal               @default(0.00) @db.Decimal(10, 2)
+  applicable_ride_type String?               @db.VarChar(50)
+
+  @@index([active, startDate, expiryDate], map: "idx_active")
+  @@index([category], map: "idx_category")
+}
+
+model order_items {
+  item_id          Int               @id @default(autoincrement())
+  order_id         String            @db.VarChar(12)
+  business_id      Int
+  batch_id         BigInt?           @db.UnsignedBigInt
+  business_name    String            @db.VarChar(255)
+  menu_id          Int
+  item_name        String            @db.VarChar(255)
+  item_image       String?           @db.VarChar(500)
+  quantity         Int               @default(1)
+  price            Decimal           @db.Decimal(10, 2)
+  subtotal         Decimal           @db.Decimal(10, 2)
+  platform_fee     Decimal?          @default(0.00) @db.Decimal(10, 2)
+  delivery_fee     Decimal?          @default(0.00) @db.Decimal(10, 2)
+  delivery_batches delivery_batches? @relation(fields: [batch_id], references: [batch_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_order_items_batch")
+  orders           orders            @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Restrict, map: "order_items_ibfk_1")
+
+  @@index([business_id, order_id], map: "idx_items_biz_order")
+  @@index([order_id], map: "idx_items_order")
+  @@index([batch_id], map: "idx_order_items_batch_id")
+  @@index([order_id], map: "idx_order_items_order_id")
+  @@index([batch_id], map: "idx_orders_batch_id")
+}
+
+model order_notification {
+  notification_id String    @id @db.Char(36)
+  order_id        String    @db.VarChar(12)
+  business_id     Int
+  user_id         Int
+  type            String    @db.VarChar(64)
+  title           String    @db.VarChar(160)
+  body_preview    String    @db.VarChar(220)
+  is_read         Boolean   @default(false)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  delivered_at    DateTime? @db.Timestamp(0)
+  seen_at         DateTime? @db.Timestamp(0)
+
+  @@index([business_id, created_at], map: "idx_notif_merchant_time")
+  @@index([business_id, is_read, created_at], map: "idx_notif_merchant_unread")
+  @@index([order_id], map: "idx_notif_order")
+}
+
+model order_wallet_captures {
+  order_id     String   @db.VarChar(32)
+  capture_type String   @db.VarChar(32)
+  captured_at  DateTime @default(now()) @db.DateTime(0)
+  buyer_txn_id String?  @db.VarChar(64)
+  merch_txn_id String?  @db.VarChar(64)
+  admin_txn_id String?  @db.VarChar(64)
+
+  @@id([order_id, capture_type])
+}
+
+model orders {
+  order_id                  String                        @id @db.VarChar(12)
+  user_id                   Int
+  service_type              orders_service_type           @default(FOOD)
+  business_id               Int?                          @db.UnsignedInt
+  batch_id                  BigInt?                       @db.UnsignedBigInt
+  total_amount              Decimal                       @db.Decimal(10, 2)
+  discount_amount           Decimal?                      @default(0.00) @db.Decimal(10, 2)
+  delivery_fee              Decimal                       @default(0.00) @db.Decimal(10, 2)
+  payment_method            orders_payment_method
+  delivery_address          String?                       @db.VarChar(500)
+  delivery_lat              Decimal?                      @db.Decimal(9, 6)
+  delivery_lng              Decimal?                      @db.Decimal(9, 6)
+  note_for_restaurant       String?                       @db.VarChar(500)
+  if_unavailable            String?                       @db.VarChar(256)
+  status                    String?                       @default("PENDING") @db.VarChar(100)
+  status_reason             String?                       @db.VarChar(255)
+  fulfillment_type          orders_fulfillment_type?      @default(Delivery)
+  priority                  Boolean?                      @default(false)
+  estimated_arrivial_time   String?                       @db.VarChar(40)
+  created_at                DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at                DateTime?                     @default(now()) @db.Timestamp(0)
+  platform_fee              Decimal?                      @default(0.00) @db.Decimal(10, 2)
+  merchant_delivery_fee     Decimal?                      @db.Decimal(10, 2)
+  delivery_batch_id         BigInt?                       @db.UnsignedBigInt
+  delivery_driver_id        Int?
+  delivery_status           orders_delivery_status        @default(PENDING)
+  delivery_ride_id          BigInt?
+  delivered_at              DateTime?                     @db.DateTime(0)
+  delivery_floor_unit       String?                       @db.VarChar(80)
+  delivery_instruction_note String?                       @db.VarChar(256)
+  delivery_photo_url        String?                       @db.Text
+  delivery_special_mode     orders_delivery_special_mode?
+  delivery_photo_urls       String?                       @db.Text
+  pickedup_by               String?                       @db.VarChar(100)
+  pickedup_at               DateTime?                     @db.Timestamp(0)
+  order_items               order_items[]
+
+  @@index([batch_id], map: "idx_orders_batch_id")
+  @@index([business_id, service_type, created_at], map: "idx_orders_business_service_created")
+  @@index([created_at], map: "idx_orders_created")
+  @@index([user_id], map: "idx_orders_user")
+}
+
+model organizer_revenue_share {
+  id                   Int              @id @default(autoincrement()) @db.UnsignedInt
+  organizer_id         String           @unique(map: "organizer_id") @db.Char(36)
+  total_revenue        Decimal          @default(0.00) @db.Decimal(15, 2)
+  org_share_pct        Decimal          @default(80.00) @db.Decimal(5, 2)
+  tabdey_share_pct     Decimal          @default(20.00) @db.Decimal(5, 2)
+  total_org_revenue    Decimal          @default(0.00) @db.Decimal(15, 2)
+  total_tabdey_revenue Decimal          @default(0.00) @db.Decimal(15, 2)
+  created_at           DateTime         @default(now()) @db.Timestamp(0)
+  updated_at           DateTime         @default(now()) @db.Timestamp(0)
+  updated_by           BigInt?          @db.UnsignedBigInt
+  event_organizers     event_organizers @relation(fields: [organizer_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "organizer_revenue_share_ibfk_1")
+  users                users?           @relation(fields: [updated_by], references: [user_id], onUpdate: Restrict, map: "organizer_revenue_share_ibfk_2")
+
+  @@index([updated_by], map: "updated_by")
+}
+
+model pickedup_order_items {
+  pickedup_item_id Int             @id @default(autoincrement())
+  order_id         String          @db.VarChar(50)
+  business_id      Int
+  business_name    String?         @db.VarChar(255)
+  menu_id          Int?
+  item_name        String?         @db.VarChar(255)
+  item_image       String?         @db.VarChar(500)
+  quantity         Int?            @default(1)
+  price            Decimal?        @db.Decimal(10, 2)
+  subtotal         Decimal?        @db.Decimal(10, 2)
+  created_at       DateTime        @default(now()) @db.Timestamp(0)
+  pickedup_orders  pickedup_orders @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_pickedup_order_items_order")
+
+  @@index([business_id], map: "idx_business_id")
+  @@index([order_id], map: "idx_order_id")
+}
+
+model pickedup_orders {
+  pickedup_id           Int                    @id @default(autoincrement())
+  order_id              String                 @unique(map: "order_id") @db.VarChar(50)
+  user_id               Int
+  business_id           Int
+  business_name         String?                @db.VarChar(255)
+  status                String?                @default("PICKEDUP") @db.VarChar(50)
+  status_reason         String?                @db.VarChar(255)
+  total_amount          Decimal?               @db.Decimal(10, 2)
+  discount_amount       Decimal?               @default(0.00) @db.Decimal(10, 2)
+  payment_method        String?                @db.VarChar(50)
+  pickup_address        String?                @db.Text
+  note_for_restaurant   String?                @db.Text
+  if_unavailable        String?                @db.VarChar(50)
+  fulfillment_type      String?                @db.VarChar(50)
+  priority              String?                @db.VarChar(20)
+  estimated_pickup_time DateTime?              @db.Timestamp(0)
+  pickedup_by           String?                @db.VarChar(100)
+  pickedup_at           DateTime?              @db.Timestamp(0)
+  original_created_at   DateTime               @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  original_updated_at   DateTime               @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  created_at            DateTime               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime               @default(now()) @db.Timestamp(0)
+  pickedup_order_items  pickedup_order_items[]
+
+  @@index([business_id], map: "idx_business_id")
+  @@index([order_id], map: "idx_order_id")
+  @@index([pickedup_at], map: "idx_pickedup_at")
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model places {
+  id       BigInt               @id @default(autoincrement())
+  osm_id   BigInt?
+  name     String               @db.VarChar(500)
+  name_en  String?              @db.VarChar(500)
+  amenity  String?              @db.VarChar(100)
+  tourism  String?              @db.VarChar(100)
+  shop     String?              @db.VarChar(100)
+  place    String?              @db.VarChar(100)
+  lat      Float
+  lon      Float
+  location Unsupported("point")
+  tags     String?              @db.LongText
+
+  @@index([location(length: 32)], map: "sp_location")
+  @@fulltext([name], map: "ft_name")
+}
+
+model platform_fee_rules {
+  rule_id         BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  country_code    String?                     @db.Char(2)
+  city_id         String?                     @db.VarChar(64)
+  service_type    String?                     @db.VarChar(64)
+  trip_type       String?                     @db.VarChar(32)
+  channel         String?                     @db.VarChar(32)
+  fee_type        platform_fee_rules_fee_type
+  fee_percent_bp  Int?                        @default(0) @db.UnsignedInt
+  fee_fixed_cents Int?                        @default(0) @db.UnsignedInt
+  min_cents       Int?                        @default(0) @db.UnsignedInt
+  max_cents       Int?                        @default(0) @db.UnsignedInt
+  apply_on        platform_fee_rules_apply_on @default(subtotal)
+  priority        Int                         @default(100)
+  is_active       Boolean                     @default(true)
+  starts_at       DateTime                    @db.DateTime(0)
+  ends_at         DateTime?                   @db.DateTime(0)
+  created_at      DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                    @default(now()) @db.Timestamp(0)
+
+  @@index([country_code, city_id, service_type, trip_type, channel, is_active, starts_at, ends_at], map: "idx_match")
+}
+
+model platform_levies {
+  levy_id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id          BigInt   @db.UnsignedBigInt
+  ride_id            BigInt   @db.UnsignedBigInt
+  platform_fee_cents Int      @default(0) @db.UnsignedInt
+  tax_cents          Int      @default(0) @db.UnsignedInt
+  currency           String   @default("BTN") @db.Char(3)
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+  updated_at         DateTime @default(now()) @db.Timestamp(0)
+  fee_rule_id        BigInt?  @db.UnsignedBigInt
+  tax_rule_id        BigInt?  @db.UnsignedBigInt
+  payment_method     String?  @db.VarChar(20)
+  drivers            drivers  @relation(fields: [driver_id], references: [driver_id], map: "fk_pl_driver")
+  rides              rides    @relation(fields: [ride_id], references: [ride_id], map: "fk_pl_ride")
+
+  @@unique([driver_id, ride_id], map: "uniq_driver_ride")
+  @@index([driver_id], map: "idx_driver")
+  @@index([ride_id], map: "idx_ride")
+  @@index([fee_rule_id, tax_rule_id], map: "idx_rules")
+}
+
+model platform_revenue {
+  revenue_id             BigInt                           @id @default(autoincrement()) @db.UnsignedBigInt
+  source_type            platform_revenue_source_type
+  source_id              String                           @db.VarChar(64)
+  gross_amount_cents     Int                              @db.UnsignedInt
+  tax_cents              Int                              @db.UnsignedInt
+  net_revenue_cents      Int                              @db.UnsignedInt
+  commission_type        platform_revenue_commission_type
+  commission_rate_bp     Int?                             @default(0) @db.UnsignedInt
+  commission_fixed_cents Int?                             @default(0) @db.UnsignedInt
+  created_at             DateTime                         @default(now()) @db.Timestamp(0)
+  payment_method         String?                          @db.VarChar(20)
+
+  @@unique([source_type, source_id], map: "uq_source")
+  @@index([created_at], map: "idx_revenue_date")
+  @@index([source_type], map: "idx_source_type")
+}
+
+model point_conversion_rule {
+  id              Int      @id @default(1) @db.UnsignedTinyInt
+  points_required Int      @db.UnsignedInt
+  wallet_amount   Decimal  @db.Decimal(10, 2)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now()) @db.DateTime(0)
+  updated_at      DateTime @default(now()) @db.DateTime(0)
+}
+
+model point_system {
+  point_id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  min_amount_per_point Decimal   @db.Decimal(10, 2)
+  point_to_award       Int       @db.UnsignedInt
+  is_active            Boolean   @default(true)
+  created_at           DateTime? @default(now()) @db.Timestamp(0)
+  updated_at           DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([is_active], map: "is_active")
+}
+
+model pool_batches {
+  pool_batch_id BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  city_id       String              @db.VarChar(64)
+  service_type  String              @db.VarChar(32)
+  status        pool_batches_status @default(forming)
+  created_at    DateTime            @default(now()) @db.DateTime(0)
+  started_at    DateTime?           @db.DateTime(0)
+  completed_at  DateTime?           @db.DateTime(0)
+  rides         rides[]
+
+  @@index([status, created_at], map: "idx_pool_status")
+}
+
+model receipt_email {
+  id              Int                            @id @default(autoincrement())
+  order_id        String                         @unique(map: "unique_order") @db.VarChar(50)
+  user_id         Int
+  business_id     Int
+  user_email      String                         @db.VarChar(255)
+  user_name       String?                        @db.VarChar(255)
+  business_name   String?                        @db.VarChar(255)
+  receipt_sent    Boolean?                       @default(false)
+  receipt_sent_at DateTime?                      @db.Timestamp(0)
+  pdf_generated   Boolean?                       @default(false)
+  email_status    receipt_email_email_status?    @default(pending)
+  error_message   String?                        @db.Text
+  retry_count     Int?                           @default(0)
+  order_data      String?                        @db.LongText
+  created_at      DateTime                       @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                       @default(now()) @db.Timestamp(0)
+  delivery_method receipt_email_delivery_method? @default(DELIVERY)
+
+  @@index([business_id], map: "idx_business_id")
+  @@index([delivery_method], map: "idx_delivery_method")
+  @@index([order_id], map: "idx_order_id")
+  @@index([receipt_sent, email_status], map: "idx_receipt_sent")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model reviews {
+  id         String   @id @db.Char(36)
+  event_id   String   @db.Char(36)
+  user_id    BigInt   @db.UnsignedBigInt
+  rating     Int      @db.TinyInt
+  comment    String?  @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  events     events   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reviews_ibfk_1")
+  users      users    @relation(fields: [user_id], references: [user_id], onUpdate: Restrict, map: "reviews_ibfk_2")
+
+  @@unique([event_id, user_id], map: "uq_review")
+  @@index([user_id], map: "user_id")
+}
+
+model ride_booking_earnings {
+  booking_id            BigInt        @id @db.UnsignedBigInt
+  driver_id             BigInt        @db.UnsignedBigInt
+  base_cents            Int           @default(0)
+  distance_cents        Int           @default(0)
+  time_cents            Int           @default(0)
+  surge_cents           Int           @default(0)
+  tolls_cents           Int           @default(0)
+  tips_cents            Int           @default(0)
+  other_adj_cents       Int           @default(0)
+  platform_fee_cents    Int           @default(0)
+  tax_cents             Int           @default(0)
+  driver_earnings_cents Int?
+  currency              String        @default("BTN") @db.Char(3)
+  created_at            DateTime      @default(now()) @db.DateTime(0)
+  updated_at            DateTime      @default(now()) @db.DateTime(0)
+  ride_bookings         ride_bookings @relation(fields: [booking_id], references: [booking_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_be_booking")
+}
+
+model ride_bookings {
+  booking_id            BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id               BigInt                 @db.UnsignedBigInt
+  passenger_id          BigInt                 @db.UnsignedBigInt
+  seats                 Int                    @default(1) @db.UnsignedInt
+  status                ride_bookings_status   @default(requested)
+  requested_at          DateTime               @default(now()) @db.DateTime(0)
+  accepted_at           DateTime?              @db.DateTime(0)
+  arrived_pickup_at     DateTime?              @db.DateTime(0)
+  started_at            DateTime?              @db.DateTime(0)
+  completed_at          DateTime?              @db.DateTime(0)
+  cancelled_at          DateTime?              @db.DateTime(0)
+  cancel_reason         String?                @db.VarChar(255)
+  pickup_place          String?                @db.VarChar(255)
+  dropoff_place         String?                @db.VarChar(255)
+  pickup_lat            Float?
+  pickup_lng            Float?
+  dropoff_lat           Float?
+  dropoff_lng           Float?
+  fare_cents            Int                    @default(0) @db.UnsignedInt
+  currency              String                 @default("BTN") @db.Char(3)
+  created_at            DateTime               @default(now()) @db.DateTime(0)
+  driver_id             BigInt?                @db.UnsignedBigInt
+  ride_booking_earnings ride_booking_earnings?
+  drivers               drivers?               @relation(fields: [driver_id], references: [driver_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_rb_driver")
+  rides                 rides                  @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_rb_ride")
+  ride_stops            ride_stops[]
+  ride_tips             ride_tips[]
+
+  @@index([passenger_id], map: "idx_passenger")
+  @@index([driver_id], map: "idx_rb_driver")
+  @@index([ride_id], map: "idx_ride")
+  @@index([status, requested_at], map: "idx_status")
+}
+
+model ride_guest_waypoints {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id    BigInt
+  user_id    BigInt
+  lat        Float
+  lng        Float
+  address    String?  @db.VarChar(255)
+  seq        Int      @default(0)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  updated_at DateTime @default(now()) @db.DateTime(0)
+
+  @@unique([ride_id, user_id], map: "uq_ride_user")
+  @@index([ride_id, seq], map: "idx_ride_seq")
+  @@index([user_id], map: "idx_user")
+}
+
+model ride_invites {
+  invite_id   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id     BigInt    @db.UnsignedBigInt
+  invite_code String    @unique(map: "uq_invite_code") @db.VarChar(16)
+  created_by  BigInt    @db.UnsignedBigInt
+  max_guests  Int?      @default(3) @db.UnsignedTinyInt
+  expires_at  DateTime? @db.DateTime(0)
+  created_at  DateTime  @default(now()) @db.DateTime(0)
+
+  @@index([ride_id], map: "idx_ride_id")
+}
+
+model ride_participants {
+  participant_id BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id        BigInt                        @db.UnsignedBigInt
+  user_id        BigInt                        @db.UnsignedBigInt
+  role           ride_participants_role
+  seats          Int                           @default(1) @db.UnsignedTinyInt
+  join_status    ride_participants_join_status @default(joined)
+  stage          ride_participants_stage       @default(waiting)
+  joined_at      DateTime                      @default(now()) @db.DateTime(0)
+  updated_at     DateTime                      @default(now()) @db.DateTime(0)
+
+  @@unique([ride_id, user_id], map: "uq_ride_user")
+  @@index([ride_id], map: "idx_ride_id")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model ride_pricing_snapshots {
+  id                   BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id              BigInt   @unique(map: "ride_id")
+  platform_fee_cents   Int
+  gst_cents            Int
+  total_payable_cents  Int
+  driver_payout_cents  Int
+  platform_fee_rule_id BigInt?
+  tax_rule_id          BigInt?
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+}
+
+model ride_ratings {
+  rating_id      BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id        BigInt   @unique(map: "uq_rr_ride") @db.UnsignedBigInt
+  driver_id      BigInt   @db.UnsignedBigInt
+  passenger_id   BigInt?  @db.UnsignedBigInt
+  rating         Int      @db.UnsignedTinyInt
+  comment        String?  @db.VarChar(500)
+  created_at     DateTime @default(now()) @db.DateTime(0)
+  payment_status Boolean  @default(true)
+  drivers        drivers  @relation(fields: [driver_id], references: [driver_id], onUpdate: Restrict, map: "fk_rr_driver")
+  rides          rides    @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_rr_ride")
+
+  @@index([driver_id, created_at], map: "idx_rr_driver_created")
+  @@index([driver_id, rating], map: "idx_rr_driver_rating")
+}
+
+model ride_stops {
+  stop_id       BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id       BigInt          @db.UnsignedBigInt
+  booking_id    BigInt?         @db.UnsignedBigInt
+  type          ride_stops_type
+  seq           Int
+  place         String?         @db.VarChar(255)
+  lat           Float
+  lng           Float
+  eta_at        DateTime?       @db.DateTime(0)
+  added_at      DateTime        @default(now()) @db.DateTime(0)
+  ride_bookings ride_bookings?  @relation(fields: [booking_id], references: [booking_id], onUpdate: Restrict, map: "fk_rs_booking")
+  rides         rides           @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_rs_ride")
+
+  @@index([booking_id], map: "fk_rs_booking")
+  @@index([ride_id, seq], map: "idx_rs_ride")
+}
+
+model ride_tips {
+  tip_id          BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id         BigInt           @db.UnsignedBigInt
+  driver_id       BigInt           @db.UnsignedBigInt
+  passenger_id    BigInt           @db.UnsignedBigInt
+  booking_id      BigInt?          @db.UnsignedBigInt
+  amount_cents    Int              @db.UnsignedInt
+  currency        String           @default("BTN") @db.Char(3)
+  idempotency_key String?          @unique(map: "uniq_idem") @db.VarChar(64)
+  status          ride_tips_status @default(captured)
+  created_at      DateTime         @default(now()) @db.DateTime(0)
+  updated_at      DateTime         @default(now()) @db.DateTime(0)
+  ride_bookings   ride_bookings?   @relation(fields: [booking_id], references: [booking_id], onUpdate: Restrict, map: "fk_rt_booking")
+  drivers         drivers          @relation(fields: [driver_id], references: [driver_id], onUpdate: Restrict, map: "fk_rt_driver")
+  rides           rides            @relation(fields: [ride_id], references: [ride_id], onDelete: Cascade, onUpdate: Restrict, map: "fk_rt_ride")
+
+  @@index([booking_id], map: "idx_booking")
+  @@index([driver_id], map: "idx_driver")
+  @@index([passenger_id], map: "idx_passenger")
+  @@index([ride_id], map: "idx_ride")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ride_types {
+  id                     BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name                   String   @unique(map: "uq_ride_types_name") @db.VarChar(100)
+  code                   String   @unique(map: "uq_ride_types_code") @db.VarChar(32)
+  description            String?  @db.Text
+  base_fare_cents        Int
+  per_km_rate_cents      Int
+  min_fare_cents         Int
+  cancellation_fee_cents Int
+  capacity               Int      @default(4) @db.UnsignedSmallInt
+  vehicle_type           String   @db.VarChar(32)
+  icon_url               String?  @db.VarChar(512)
+  is_active              Boolean  @default(true)
+  created_at             DateTime @default(now()) @db.Timestamp(0)
+  updated_at             DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([is_active], map: "idx_ride_types_is_active")
+  @@index([vehicle_type], map: "idx_ride_types_vehicle_type")
+}
+
+model ride_waypoints {
+  ride_id     BigInt
+  order_index Int
+  lat         Float
+  lng         Float
+  address     String?  @db.VarChar(255)
+  created_at  DateTime @default(now()) @db.DateTime(0)
+
+  @@id([ride_id, order_index])
+  @@index([ride_id], map: "idx_ride")
+}
+
+model rides {
+  ride_id               BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  driver_id             BigInt?              @db.UnsignedBigInt
+  passenger_id          BigInt?              @db.UnsignedBigInt
+  service_type          String               @default("standard") @db.VarChar(32)
+  trip_type             rides_trip_type      @default(instant)
+  booking_type          rides_booking_type   @default(INSTANT)
+  scheduled_at          DateTime?            @db.DateTime(0)
+  dispatch_at           DateTime?            @db.DateTime(0)
+  reserved_at           DateTime?            @db.DateTime(0)
+  reserved_confirmed_at DateTime?            @db.DateTime(0)
+  next_attempt_at       DateTime?            @db.DateTime(0)
+  attempt_count         Int                  @default(0)
+  is_shared             Boolean              @default(false)
+  pool_batch_id         BigInt?              @db.UnsignedBigInt
+  status                rides_status
+  requested_at          DateTime             @db.DateTime(0)
+  accepted_at           DateTime?            @db.DateTime(0)
+  arrived_pickup_at     DateTime?            @db.DateTime(0)
+  started_at            DateTime?            @db.DateTime(0)
+  completed_at          DateTime?            @db.DateTime(0)
+  cancelled_at          DateTime?            @db.DateTime(0)
+  cancel_reason         String?              @db.VarChar(255)
+  fail_reason           String?              @db.VarChar(64)
+  offer_driver_id       BigInt?              @db.UnsignedBigInt
+  offer_expire_at       DateTime?            @db.DateTime(0)
+  driver_reminded_at    DateTime?            @db.DateTime(0)
+  pickup_place          String?              @db.VarChar(255)
+  dropoff_place         String?              @db.VarChar(255)
+  pickup_lat            Float?
+  pickup_lng            Float?
+  dropoff_lat           Float?
+  dropoff_lng           Float?
+  distance_m            Int?
+  duration_s            Int?
+  capacity_seats        Int?                 @db.UnsignedTinyInt
+  seats_booked          Int                  @default(0) @db.UnsignedTinyInt
+  fare_cents            Int?                 @db.UnsignedInt
+  offered_fare_cents    Int?                 @db.UnsignedInt
+  final_fare_cents      Int?                 @db.UnsignedInt
+  base_fare_cents       Int                  @default(0) @db.UnsignedInt
+  currency              String               @default("BTN") @db.Char(3)
+  created_at            DateTime             @default(now()) @db.DateTime(0)
+  payment_method        String?              @db.VarChar(20)
+  flight_number         String?              @db.VarChar(20)
+  airport_code          String?              @db.VarChar(10)
+  airport_name          String?              @db.VarChar(100)
+  delivery_drops        delivery_drops[]
+  driver_adjustments    driver_adjustments[]
+  driver_earnings       driver_earnings[]
+  platform_levies       platform_levies[]
+  ride_bookings         ride_bookings[]
+  ride_ratings          ride_ratings?
+  ride_stops            ride_stops[]
+  ride_tips             ride_tips[]
+  drivers               drivers?             @relation(fields: [driver_id], references: [driver_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_rides_driver")
+  pool_batches          pool_batches?        @relation(fields: [pool_batch_id], references: [pool_batch_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_rides_pool_batch")
+
+  @@index([payment_method], map: "idx_payment_method")
+  @@index([driver_id, status, accepted_at], map: "idx_rides_driver_active")
+  @@index([driver_id, completed_at], map: "idx_rides_driver_completed")
+  @@index([driver_id, requested_at], map: "idx_rides_driver_requested")
+  @@index([status, next_attempt_at], map: "idx_rides_next_attempt")
+  @@index([offer_driver_id, offer_expire_at], map: "idx_rides_offer_driver")
+  @@index([passenger_id, status, requested_at], map: "idx_rides_passenger_active")
+  @@index([pool_batch_id], map: "idx_rides_pool_batch")
+  @@index([is_shared, status, seats_booked, capacity_seats], map: "idx_rides_pool_sales")
+  @@index([booking_type, status, dispatch_at], map: "idx_rides_sched_dispatch")
+  @@index([status, scheduled_at], map: "idx_rides_scheduled")
+  @@index([trip_type, status], map: "idx_rides_triptype_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model rma_pg_logs {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  order_no   String?  @db.VarChar(64)
+  bfs_txn_id String?  @db.VarChar(64)
+  tag        String?  @db.VarChar(32)
+  raw_log    String   @db.MediumText
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([bfs_txn_id], map: "idx_bfs_txn_id")
+  @@index([order_no], map: "idx_order_no")
+  @@index([tag, created_at], map: "idx_tag_created")
+}
+
+model settlement_accounts {
+  party_type    settlement_accounts_party_type
+  party_id      BigInt                         @db.UnsignedBigInt
+  balance_cents BigInt                         @default(0)
+  currency      String                         @default("BTN") @db.Char(3)
+  updated_at    DateTime                       @default(now()) @db.Timestamp(0)
+
+  @@id([party_type, party_id])
+  @@index([balance_cents], map: "idx_balance")
+}
+
+model settlement_ledger {
+  entry_id     BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  party_type   settlement_ledger_party_type
+  party_id     BigInt                        @db.UnsignedBigInt
+  source_type  settlement_ledger_source_type
+  source_id    String                        @db.VarChar(64)
+  entry_type   settlement_ledger_entry_type
+  amount_cents BigInt
+  currency     String                        @default("BTN") @db.Char(3)
+  note         String?                       @db.VarChar(255)
+  created_at   DateTime                      @default(now()) @db.Timestamp(0)
+
+  @@unique([party_type, party_id, source_type, source_id, entry_type], map: "uq_post_once")
+  @@index([party_type, party_id, created_at], map: "idx_party_date")
+  @@index([source_type, source_id], map: "idx_source")
+}
+
+model sms_messages {
+  id              String              @id @db.VarChar(36)
+  to_msisdn       String              @db.VarChar(32)
+  sender_id       String              @db.VarChar(32)
+  text            String              @db.Text
+  status          sms_messages_status @default(QUEUED)
+  error           String?             @db.VarChar(255)
+  smpp_message_id String?             @db.VarChar(128)
+  created_at      DateTime            @db.DateTime(0)
+  sent_at         DateTime?           @db.DateTime(0)
+  delivered_at    DateTime?           @db.DateTime(0)
+
+  @@index([smpp_message_id], map: "idx_smpp_id")
+  @@index([status], map: "idx_status")
+  @@index([to_msisdn], map: "idx_to")
+}
+
+model system_notifications {
+  id                BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  title             String                       @db.VarChar(255)
+  message           String                       @db.Text
+  delivery_channels String                       @default(dbgenerated("(json_array())")) @db.LongText
+  target_audience   String                       @default(dbgenerated("(json_array())")) @db.LongText
+  created_by        BigInt?                      @db.UnsignedBigInt
+  sent_at           DateTime?                    @db.DateTime(0)
+  status            system_notifications_status? @default(sent)
+  created_at        DateTime                     @default(now()) @db.DateTime(0)
+  updated_at        DateTime                     @default(now()) @db.DateTime(0)
+  users             users?                       @relation(fields: [created_by], references: [user_id], map: "fk_notifications_user")
+
+  @@index([created_by], map: "fk_notifications_user")
+  @@index([created_at], map: "idx_created_at")
+  @@index([status], map: "idx_status")
+}
+
+model tax_ledger {
+  tax_id           BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  source_type      tax_ledger_source_type
+  source_id        String                 @db.VarChar(64)
+  tax_type         tax_ledger_tax_type
+  tax_amount_cents Int                    @db.UnsignedInt
+  created_at       DateTime               @default(now()) @db.Timestamp(0)
+
+  @@unique([source_type, source_id], map: "uq_tax")
+}
+
+model tax_rules {
+  tax_rule_id     BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  country_code    String?                @db.Char(2)
+  city_id         String?                @db.VarChar(64)
+  service_type    String?                @db.VarChar(64)
+  tax_type        tax_rules_tax_type
+  rate_percent_bp Int                    @db.UnsignedInt
+  tax_inclusive   Boolean                @default(false)
+  taxable_base    tax_rules_taxable_base @default(platform_fee)
+  priority        Int                    @default(100)
+  is_active       Boolean                @default(true)
+  starts_at       DateTime               @db.DateTime(0)
+  ends_at         DateTime?              @db.DateTime(0)
+  created_at      DateTime               @default(now()) @db.Timestamp(0)
+  updated_at      DateTime               @default(now()) @db.Timestamp(0)
+
+  @@index([country_code, city_id, service_type, tax_type, is_active, starts_at, ends_at], map: "idx_match")
+}
+
+model ticket_tiers {
+  id              String     @id @db.Char(36)
+  event_id        String     @db.Char(36)
+  name            String     @db.VarChar(100)
+  description     String?    @db.VarChar(255)
+  price           Int
+  available_seats Int        @default(0)
+  bookings        bookings[]
+  events          events     @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "ticket_tiers_ibfk_1")
+
+  @@index([event_id], map: "event_id")
+}
+
+model user_devices {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  device_id  String    @db.VarChar(255)
+  updated_at DateTime? @default(now()) @db.Timestamp(0)
+  users      users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "user_devices_ibfk_1")
+
+  @@unique([user_id, device_id], map: "unique_user_device")
+}
+
+model user_verification {
+  verification_id   BigInt                              @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id           BigInt                              @db.UnsignedBigInt
+  verification_type user_verification_verification_type
+  token             String                              @db.VarChar(100)
+  expires_at        DateTime                            @default(now()) @db.Timestamp(0)
+  is_used           Boolean?                            @default(false)
+  created_at        DateTime?                           @default(now()) @db.Timestamp(0)
+  users             users                               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "user_verification_ibfk_1")
+
+  @@index([expires_at], map: "expires_at")
+  @@index([token], map: "token")
+  @@index([user_id], map: "user_id")
+  @@index([verification_type, user_id], map: "verification_type")
+}
+
+model user_vouchers {
+  id                   Int                         @id @default(autoincrement())
+  user_id              String                      @db.VarChar(50)
+  voucher_code         String                      @unique(map: "voucher_code") @db.VarChar(50)
+  title                String                      @db.VarChar(255)
+  description          String?                     @db.Text
+  discount_type        user_vouchers_discount_type
+  discount_value       Decimal                     @db.Decimal(10, 2)
+  applicable_ride_type String?                     @db.VarChar(50)
+  expiry_date          DateTime                    @db.DateTime(0)
+  is_used              Boolean?                    @default(false)
+  created_at           DateTime                    @default(now()) @db.Timestamp(0)
+
+  @@index([voucher_code], map: "idx_code")
+  @@index([user_id], map: "idx_user")
+}
+
+model users {
+  user_id                   BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  user_name                 String                      @db.VarChar(50)
+  email                     String                      @unique(map: "users_email_unique") @db.VarChar(100)
+  phone                     String                      @unique(map: "users_phone_unique") @db.VarChar(20)
+  password_hash             String                      @db.VarChar(255)
+  role                      String                      @default("user") @db.VarChar(20)
+  points                    BigInt                      @default(0) @db.UnsignedBigInt
+  profile_image             String                      @default("/uploads/profiles/default.png") @db.VarChar(255)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(0)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(0)
+  is_verified               Boolean?                    @default(false)
+  is_active                 Boolean?                    @default(true)
+  last_login                DateTime?                   @db.Timestamp(0)
+  cid                       String?                     @db.VarChar(11)
+  tier                      String?                     @default("bronze") @db.VarChar(50)
+  segment                   String?                     @default("regular") @db.VarChar(50)
+  admin_logs                admin_logs[]
+  all_device_ids            all_device_ids?
+  app_ratings               app_ratings[]
+  bookings                  bookings[]
+  driver_devices            driver_devices[]
+  drivers                   drivers?
+  event_bookings            event_bookings[]
+  event_organizers          event_organizers?
+  event_payment_sessions    event_payment_sessions[]
+  event_review_helpful      event_review_helpful[]
+  event_reviews             event_reviews[]
+  event_seat_holds          event_seat_holds[]
+  event_wishlists           event_wishlists[]
+  food_ratings              food_ratings[]
+  mart_ratings              mart_ratings[]
+  merchant_bank_details     merchant_bank_details[]
+  merchant_business_details merchant_business_details[]
+  organizer_revenue_share   organizer_revenue_share[]
+  reviews                   reviews[]
+  system_notifications      system_notifications[]
+  user_devices              user_devices[]
+  user_verification         user_verification[]
+  wishlists                 wishlists[]
+  account_deletion_requests account_deletion_requests[]
+
+  @@unique([cid, role], map: "users_cid_role_unique")
+  @@index([is_active], map: "is_active")
+  @@index([role], map: "role")
+}
+
+model wallet_holds {
+  hold_id     BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     BigInt              @db.UnsignedBigInt
+  source_type String              @db.VarChar(32)
+  source_id   String              @db.VarChar(64)
+  amount      Decimal             @db.Decimal(17, 2)
+  status      wallet_holds_status @default(ACTIVE)
+  created_at  DateTime            @default(now()) @db.Timestamp(0)
+  updated_at  DateTime            @default(now()) @db.Timestamp(0)
+
+  @@unique([source_type, source_id], map: "uq_hold_source")
+  @@index([user_id, status], map: "idx_user_status")
+}
+
+model wallet_id_map {
+  user_id       BigInt @db.UnsignedBigInt
+  old_wallet_id String @id @db.VarChar(20)
+  new_wallet_id String @unique(map: "new_wallet_id") @db.VarChar(20)
+}
+
+model wallet_ledger {
+  ledger_id   BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     BigInt                   @db.UnsignedBigInt
+  entry_type  wallet_ledger_entry_type
+  amount      Decimal                  @db.Decimal(17, 2)
+  source_type String                   @db.VarChar(32)
+  source_id   String                   @db.VarChar(64)
+  note        String?                  @db.VarChar(255)
+  created_at  DateTime                 @default(now()) @db.Timestamp(0)
+
+  @@index([source_type, source_id], map: "idx_source")
+  @@index([user_id, created_at], map: "idx_user_date")
+}
+
+model wallet_transactions {
+  id               BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  transaction_id   String                     @unique(map: "transaction_id") @db.VarChar(32)
+  journal_code     String?                    @db.VarChar(36)
+  tnx_from         String?                    @db.VarChar(20)
+  tnx_to           String?                    @db.VarChar(20)
+  amount           Decimal                    @db.Decimal(12, 2)
+  remark           wallet_transactions_remark
+  note             String?                    @db.Text
+  created_at       DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at       DateTime                   @default(now()) @db.Timestamp(0)
+  actual_wallet_id String?                    @db.VarChar(20)
+
+  @@index([actual_wallet_id, created_at], map: "idx_actual_wallet")
+  @@index([tnx_from], map: "idx_from")
+  @@index([journal_code], map: "idx_journal_code")
+  @@index([tnx_to], map: "idx_to")
+  @@index([created_at], map: "idx_tx_created")
+}
+
+model wallets {
+  id         BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  wallet_id  String?        @unique(map: "wallet_id") @db.VarChar(20)
+  user_id    BigInt         @unique(map: "user_id") @db.UnsignedBigInt
+  amount     Decimal        @default(0.00) @db.Decimal(15, 2)
+  t_pin      String?        @db.VarChar(255)
+  status     wallets_status @default(ACTIVE)
+  created_at DateTime       @default(now()) @db.Timestamp(0)
+  updated_at DateTime       @default(now()) @db.Timestamp(0)
+
+  @@index([created_at], map: "idx_wallet_created")
+  @@index([status], map: "idx_wallet_status")
+  @@index([user_id], map: "idx_wallet_user")
+}
+
+model wishlists {
+  user_id    BigInt   @db.UnsignedBigInt
+  event_id   String   @db.Char(36)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  users      users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: Restrict, map: "wishlists_ibfk_1")
+  events     events   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "wishlists_ibfk_2")
+
+  @@id([user_id, event_id])
+  @@index([event_id], map: "event_id")
+}
+
+model withdrawal_audit {
+  audit_id      BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  request_id    String                      @db.VarChar(64)
+  actor_type    withdrawal_audit_actor_type
+  actor_id      BigInt?                     @db.UnsignedBigInt
+  action        String                      @db.VarChar(40)
+  metadata_json String?                     @db.LongText
+  created_at    DateTime                    @default(now()) @db.Timestamp(0)
+
+  @@index([request_id, created_at], map: "idx_req_date")
+}
+
+model withdrawal_requests {
+  request_id      String                     @id @db.VarChar(64)
+  user_id         BigInt                     @db.UnsignedBigInt
+  amount          Decimal                    @db.Decimal(17, 2)
+  currency        String                     @default("BTN") @db.Char(3)
+  bank_code       String                     @db.VarChar(32)
+  bank_name       String                     @db.VarChar(64)
+  account_no      String                     @db.VarChar(64)
+  account_name    String                     @db.VarChar(128)
+  status          withdrawal_requests_status @default(HELD)
+  idempotency_key String                     @db.VarChar(80)
+  reviewed_by     BigInt?                    @db.UnsignedBigInt
+  reviewed_at     DateTime?                  @db.DateTime(0)
+  approved_by     BigInt?                    @db.UnsignedBigInt
+  approved_at     DateTime?                  @db.DateTime(0)
+  paid_by         BigInt?                    @db.UnsignedBigInt
+  paid_at         DateTime?                  @db.DateTime(0)
+  bank_reference  String?                    @unique(map: "uq_bank_ref") @db.VarChar(128)
+  user_note       String?                    @db.VarChar(255)
+  admin_note      String?                    @db.VarChar(255)
+  created_at      DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at      DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@unique([user_id, idempotency_key], map: "uq_user_idem")
+  @@index([status, created_at], map: "idx_status_date")
+  @@index([user_id, created_at], map: "idx_user_date")
+}
+
+model referrals {
+  id            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  referral_code String           @db.VarChar(32)
+  referrer_id   BigInt           @db.UnsignedBigInt
+  referee_id    BigInt           @unique(map: "uq_referee") @db.UnsignedBigInt
+  status        referrals_status @default(pending)
+  amount        Int              @default(50) @db.UnsignedInt
+  credited_at   DateTime?        @db.DateTime(0)
+  created_at    DateTime         @default(dbgenerated("(utc_timestamp())")) @db.DateTime(0)
+
+  @@index([referral_code], map: "idx_code")
+  @@index([referrer_id], map: "idx_referrer")
+  @@index([status], map: "idx_status")
+}
+
+model ride_fare_counters {
+  id            BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  ride_id       BigInt                    @db.UnsignedBigInt
+  driver_id     BigInt                    @db.UnsignedBigInt
+  counter_cents Int                       @db.UnsignedInt
+  status        ride_fare_counters_status @default(pending)
+  created_at    DateTime                  @default(now()) @db.DateTime(0)
+  updated_at    DateTime                  @default(now()) @db.DateTime(0)
+
+  @@index([driver_id, ride_id], map: "idx_rfc_driver")
+  @@index([ride_id], map: "idx_rfc_ride")
+}
+
+model user_referral_codes {
+  user_id    BigInt   @id @db.UnsignedBigInt
+  code       String   @unique(map: "uq_code") @db.VarChar(32)
+  created_at DateTime @default(dbgenerated("(utc_timestamp())")) @db.DateTime(0)
+}
+
+model wallet_transaction_logs {
+  log_id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  request_id       String?  @db.VarChar(64)
+  transaction_id   String?  @db.VarChar(64)
+  journal_code     String?  @db.VarChar(64)
+  wallet_id        String?  @db.VarChar(32)
+  user_id          BigInt?  @db.UnsignedBigInt
+  action           String   @db.VarChar(64)
+  status           String   @db.VarChar(32)
+  message          String?  @db.VarChar(500)
+  request_payload  String?  @db.LongText
+  response_payload String?  @db.LongText
+  error_payload    String?  @db.LongText
+  ip_address       String?  @db.VarChar(64)
+  user_agent       String?  @db.VarChar(255)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([action, status], map: "idx_wtl_action_status")
+  @@index([created_at], map: "idx_wtl_created_at")
+  @@index([journal_code], map: "idx_wtl_journal_code")
+  @@index([transaction_id], map: "idx_wtl_transaction_id")
+  @@index([user_id], map: "idx_wtl_user_id")
+  @@index([wallet_id], map: "idx_wtl_wallet_id")
+  @@index([request_id], map: "idx_wtl_request_id")
+}
+
+enum settlement_accounts_party_type {
+  DRIVER
+  MERCHANT
+  USER
+  PARTNER
+}
+
+enum platform_revenue_source_type {
+  TRANSPORT
+  FOOD
+  MART
+}
+
+enum cancellation_rules_cancelled_by {
+  passenger
+  driver
+  system
+}
+
+enum tax_ledger_source_type {
+  TRANSPORT
+  FOOD
+  MART
+}
+
+enum settlement_ledger_party_type {
+  DRIVER
+  MERCHANT
+  USER
+  PARTNER
+}
+
+enum user_verification_verification_type {
+  email
+  phone
+  fa    @map("2fa")
+}
+
+enum wallet_ledger_entry_type {
+  WITHDRAW_REQUEST_DEBIT
+  WITHDRAW_REFUND
+  WITHDRAW_PAID
+}
+
+enum orders_service_type {
+  FOOD
+  MART
+}
+
+enum events_category {
+  cinema
+  concert
+  festival
+  workshop
+  experience
+}
+
+enum withdrawal_audit_actor_type {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+enum driver_documents_document_type {
+  license
+  insurance
+  registration
+  profile
+}
+
+enum contact_messages_contact_type {
+  email
+  phone
+}
+
+enum ride_participants_role {
+  host
+  guest
+}
+
+enum ride_stops_type {
+  pickup
+  dropoff
+}
+
+enum tax_ledger_tax_type {
+  GST
+}
+
+enum pool_batches_status {
+  forming
+  in_progress
+  completed
+  cancelled
+}
+
+enum delivered_orders_service_type {
+  FOOD
+  MART
+}
+
+enum settlement_ledger_source_type {
+  RIDE
+  FOOD_ORDER
+  MART_ORDER
+  PAYOUT
+  PAYMENT
+  ADJUSTMENT
+}
+
+enum driver_adjustments_type {
+  cancellation_payout
+  penalty
+  bonus
+}
+
+enum ride_bookings_status {
+  requested
+  accepted
+  arrived_pickup
+  started
+  completed
+  dropped
+  cancelled_passenger
+  cancelled_driver
+  cancelled_system
+}
+
+enum delivery_batches_status {
+  forming
+  broadcasted
+  assigned
+  in_progress
+  completed
+  cancelled
+}
+
+enum event_banners_link_type {
+  event
+  screening
+  external
+}
+
+enum rides_trip_type {
+  instant
+  scheduled
+  pool
+  group
+}
+
+enum tax_rules_tax_type {
+  VAT
+  GST
+  TDS
+  DST
+  LOCAL_SURCHARGE
+}
+
+enum food_mart_revenue_owner_type {
+  FOOD
+  MART
+}
+
+enum sms_messages_status {
+  QUEUED
+  SENT
+  FAILED
+  DELIVERED
+  UNDELIVERED
+  EXPIRED
+  REJECTED
+  UNKNOWN
+}
+
+enum driver_documents_verification_status {
+  pending
+  verified
+  rejected
+}
+
+enum drivers_approval_status {
+  pending
+  approved
+  rejected
+}
+
+enum wallet_holds_status {
+  ACTIVE
+  RELEASED
+  CAPTURED
+}
+
+enum event_screenings_status {
+  active
+  housefull
+  cancelled
+}
+
+enum ride_participants_join_status {
+  joined
+  left
+  removed
+}
+
+enum rides_booking_type {
+  INSTANT
+  SCHEDULED
+  POOL
+  GROUP
+}
+
+enum user_vouchers_discount_type {
+  percentage
+  fixed
+}
+
+enum food_mart_revenue_source {
+  orders
+  cancelled
+  delivered
+}
+
+enum settlement_ledger_entry_type {
+  PLATFORM_FEE_DUE
+  TAX_DUE
+  DELIVERY_FEE_DUE
+  AUTO_DEDUCT
+  WALLET_PAYMENT
+  MANUAL_PAYMENT
+  REFUND_CREDIT
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum event_seats_section {
+  main
+  balcony
+}
+
+enum wallets_status {
+  ACTIVE
+  INACTIVE
+}
+
+enum wallet_transactions_remark {
+  CR
+  DR
+}
+
+enum platform_revenue_commission_type {
+  PERCENT
+  FIXED
+}
+
+enum ride_participants_stage {
+  waiting
+  arrived
+  onboard
+  dropped
+}
+
+enum event_payment_sessions_status {
+  pending
+  success
+  failed
+  cancelled
+}
+
+enum notifications_status {
+  unread
+  read
+}
+
+enum platform_fee_rules_fee_type {
+  percent
+  fixed
+  mixed
+}
+
+enum event_seats_category {
+  regular
+  premium
+  balcony
+}
+
+enum contact_messages_status {
+  new
+  read
+  replied
+}
+
+enum bookings_payment_method {
+  WALLET
+  CARD
+  UPI
+}
+
+enum tax_rules_taxable_base {
+  platform_fee
+  fare_subtotal
+  fare_after_discounts
+  driver_earnings
+}
+
+enum system_notifications_status {
+  pending
+  sent
+  failed
+}
+
+enum withdrawal_requests_status {
+  HELD
+  NEEDS_INFO
+  APPROVED
+  REJECTED
+  CANCELLED
+  PAID
+  FAILED
+}
+
+enum business_banners_owner_type {
+  food
+  mart
+}
+
+enum event_bookings_payment_method {
+  WALLET
+  CARD
+  UPI
+  BANK
+}
+
+enum orders_payment_method {
+  COD
+  Wallet
+  Card
+}
+
+enum ride_tips_status {
+  authorized
+  captured
+  refunded
+  failed
+}
+
+enum bookings_status {
+  confirmed
+  cancelled
+}
+
+enum food_menu_spice_level {
+  None
+  Mild
+  Medium
+  Hot
+}
+
+enum receipt_email_email_status {
+  pending
+  sent
+  failed
+  retry
+}
+
+enum event_bookings_status {
+  confirmed
+  cancelled
+  used
+}
+
+enum cancelled_orders_payment_method {
+  COD
+  WALLET
+  CARD
+}
+
+enum mart_menu_spice_level {
+  None
+  Mild
+  Medium
+  Hot
+}
+
+enum event_bookings_payment_status {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum platform_fee_rules_apply_on {
+  subtotal
+  fare_after_discounts
+  driver_take_home_base
+}
+
+enum delivered_orders_payment_method {
+  COD
+  WALLET
+  CARD
+}
+
+enum delivery_drops_status {
+  pending
+  assigned
+  picked
+  delivered
+  failed
+  cancelled
+}
+
+enum rides_status {
+  scheduled
+  reserved
+  matching
+  requested
+  offered_to_driver
+  accepted
+  arrived_pickup
+  started
+  completed
+  cancelled_driver
+  cancelled_rider
+  cancelled_system
+  failed
+}
+
+enum cancelled_orders_fulfillment_type {
+  Delivery
+  Pickup
+}
+
+enum delivered_orders_fulfillment_type {
+  Delivery
+  Pickup
+}
+
+enum receipt_email_delivery_method {
+  DELIVERY
+  PICKUP
+}
+
+enum orders_fulfillment_type {
+  Delivery
+  Pickup
+}
+
+enum cancelled_orders_cancelled_by {
+  USER
+  MERCHANT
+  ADMIN
+  SYSTEM
+}
+
+enum delivered_orders_delivered_by {
+  USER
+  MERCHANT
+  ADMIN
+  SYSTEM
+  DRIVER
+}
+
+enum delivered_orders_delivery_status {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  ON_ROAD
+  DELIVERED
+  CANCELLED
+}
+
+enum offers_discount_type {
+  percentage
+  fixed
+}
+
+enum cancelled_orders_delivery_special_mode {
+  DROP_OFF
+  MEET_UP
+}
+
+enum orders_delivery_status {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  ON_ROAD
+  DELIVERED
+  CANCELLED
+}
+
+enum delivered_orders_delivery_special_mode {
+  DROP_OFF
+  MEET_UP
+}
+
+enum orders_delivery_special_mode {
+  DROP_OFF
+  MEET_UP
+}
+
+enum referrals_status {
+  pending
+  credited
+  expired
+}
+
+enum ride_fare_counters_status {
+  pending
+  accepted
+  rejected
+  withdrawn
+  expired
+}
+
+model account_deletion_requests {
+  request_id   BigInt                            @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id      BigInt?                           @db.UnsignedBigInt
+  reason       String?                           @db.Text
+  status       account_deletion_requests_status @default(pending)
+  requested_at DateTime                          @default(now()) @db.Timestamp(0)
+  resolved_at  DateTime?                         @db.Timestamp(0)
+  resolved_by  BigInt?                           @db.UnsignedBigInt
+  reject_note  String?                           @db.VarChar(500)
+  users        users?                            @relation(fields: [user_id], references: [user_id], onDelete: SetNull, map: "fk_adr_user")
+
+  @@index([status, requested_at], map: "idx_adr_status_date")
+  @@index([user_id], map: "idx_adr_user")
+}
+
+enum account_deletion_requests_status {
+  pending
+  approved
+  rejected
+}

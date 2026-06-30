@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Two-User Chat (Auto-WS + Images)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0f1115;
+        --card: #151823;
+        --muted: #7b8192;
+        --ink: #e6e9f2;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial;
+      }
+      header {
+        padding: 14px 18px;
+        border-bottom: 1px solid #1f2433;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      header h1 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: 600;
+      }
+      header code {
+        color: var(--muted);
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        padding: 14px;
+      }
+      .pane {
+        background: var(--card);
+        border: 1px solid #1f2433;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        min-height: 86vh;
+      }
+      .pane h2 {
+        margin: 0;
+        padding: 12px 14px;
+        border-bottom: 1px solid #21263a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .section {
+        padding: 12px 14px;
+        border-bottom: 1px solid #1f2433;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      input,
+      button {
+        font: 14px system-ui, -apple-system, Segoe UI;
+      }
+      input {
+        background: #0f1320;
+        color: var(--ink);
+        border: 1px solid #2a3045;
+        border-radius: 8px;
+        padding: 8px 10px;
+        width: 100%;
+      }
+      input::placeholder {
+        color: #6b7280;
+      }
+      button {
+        background: #1f6feb;
+        border: 1px solid #2b7bff;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #222a44;
+        border-color: #2a3045;
+      }
+      .chats {
+        max-height: 220px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .chatItem {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px;
+        border: 1px solid #20263b;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .chatItem:hover {
+        border-color: #2a3553;
+        background: #12172a;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: #262d46;
+        display: grid;
+        place-items: center;
+        color: #c1c9e8;
+        font-weight: 600;
+        overflow: hidden;
+      }
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .chatMeta {
+        display: flex;
+        flex-direction: column;
+      }
+      .chatName {
+        font-weight: 600;
+      }
+      .chatPreview {
+        font-size: 12px;
+        color: #9aa3b2;
+      }
+      .msgs {
+        flex: 1;
+        padding: 10px 12px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .msg {
+        max-width: 85%;
+        padding: 8px 10px;
+        border-radius: 12px;
+        white-space: pre-wrap;
+      }
+      .msg img {
+        max-width: 240px;
+        border-radius: 8px;
+        display: block;
+      }
+      .me {
+        align-self: flex-end;
+        background: #244c2f;
+        border: 1px solid #2f6e3f;
+      }
+      .peer {
+        align-self: flex-start;
+        background: #2a2f45;
+        border: 1px solid #394061;
+      }
+      .meta {
+        color: #9aa3b2;
+        font-size: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .footer {
+        padding: 10px 12px;
+        border-top: 1px solid #1f2433;
+        display: flex;
+        gap: 8px;
+      }
+      .status {
+        color: #7b8192;
+        font-size: 12px;
+        padding: 6px 12px;
+        border-top: 1px solid #1f2433;
+      }
+      .tiny {
+        font-size: 12px;
+        color: #7b8192;
+      }
+      .ok {
+        color: #6ee7b7;
+      }
+      .bad {
+        color: #fca5a5;
+      }
+      .pill {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #26314a;
+        border: 1px solid #334163;
+        color: #c1c9e8;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Two-User Chat (Auto-connect WS + Images)</h1>
+      <code>Left = User A, Right = User B</code>
+    </header>
+
+    <div class="wrap">
+      <!-- LEFT -->
+      <section class="pane" id="paneA">
+        <h2>Client A <span class="pill" id="aUid">uid: -</span></h2>
+
+        <div class="section">
+          <div class="row">
+            <input id="aPhone" placeholder="phone" value="17234567" />
+          </div>
+          <div class="row">
+            <input
+              id="aPass"
+              placeholder="password"
+              type="password"
+              value="123456"
+            />
+          </div>
+          <div class="row" style="gap: 8px">
+            <button id="aLogin">Login</button>
+            <button id="aReload" class="secondary">Reload chats</button>
+          </div>
+          <div class="tiny">Token: <span id="aTok" class="pill">-</span></div>
+        </div>
+
+        <div class="section">
+          <div class="chats" id="aChats"></div>
+        </div>
+
+        <div class="msgs" id="aMsgs"></div>
+
+        <div class="footer">
+          <input id="aText" placeholder="Type message…" />
+          <input
+            type="file"
+            id="aFile"
+            accept="image/*"
+            style="display: none"
+          />
+          <button id="aPick" class="secondary" title="Attach image">📎</button>
+          <button id="aSend">Send</button>
+          <button id="aOlder" class="secondary">Load older</button>
+        </div>
+        <div class="status" id="aStatus">Idle.</div>
+      </section>
+
+      <!-- RIGHT -->
+      <section class="pane" id="paneB">
+        <h2>Client B <span class="pill" id="bUid">uid: -</span></h2>
+
+        <div class="section">
+          <div class="row"><input id="bPhone" placeholder="phone" /></div>
+          <div class="row">
+            <input id="bPass" placeholder="password" type="password" />
+          </div>
+          <div class="row" style="gap: 8px">
+            <button id="bLogin">Login</button>
+            <button id="bReload" class="secondary">Reload chats</button>
+          </div>
+          <div class="tiny">Token: <span id="bTok" class="pill">-</span></div>
+        </div>
+
+        <div class="section">
+          <div class="chats" id="bChats"></div>
+        </div>
+
+        <div class="msgs" id="bMsgs"></div>
+
+        <div class="footer">
+          <input id="bText" placeholder="Type message…" />
+          <input
+            type="file"
+            id="bFile"
+            accept="image/*"
+            style="display: none"
+          />
+          <button id="bPick" class="secondary" title="Attach image">📎</button>
+          <button id="bSend">Send</button>
+          <button id="bOlder" class="secondary">Load older</button>
+        </div>
+        <div class="status" id="bStatus">Idle.</div>
+      </section>
+    </div>
+
+    <script>
+      const CONFIG = {
+        // If you hit CORS on this domain, set LOGIN_URL to 'http://localhost:8080/login-proxy'
+        LOGIN_URL: "https://grab.newedge.bt/driver/api/login",
+        HTTP_BASE: "http://localhost:8080",
+        WS_URL: "ws://localhost:8080",
+      };
+
+      function fmtTs(ts) {
+        const d = new Date(+ts || Date.now());
+        return d.toLocaleTimeString();
+      }
+      function escapeHtml(s) {
+        return (s || "").replace(
+          /[&<>"']/g,
+          (ch) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[ch])
+        );
+      }
+
+      async function uploadChatImage({ token, peer, file }) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("peer", String(peer));
+        const res = await fetch(`${CONFIG.HTTP_BASE}/files/chat-image`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        if (!res.ok) {
+          throw new Error("Upload failed");
+        }
+        const data = await res.json();
+        return data.media; // {url, path, mime, size, cid}
+      }
+
+      class ChatClient {
+        constructor(root, side) {
+          this.side = side;
+          this.root = root;
+          this.state = {
+            uid: null,
+            token: null,
+            ws: null,
+            peer: null,
+            cid: null,
+            oldestId: null,
+          };
+          this.chatList = [];
+
+          this.el = {
+            phone: root.querySelector(`#${side}Phone`),
+            pass: root.querySelector(`#${side}Pass`),
+            login: root.querySelector(`#${side}Login`),
+            reload: root.querySelector(`#${side}Reload`),
+            chats: root.querySelector(`#${side}Chats`),
+            msgs: root.querySelector(`#${side}Msgs`),
+            text: root.querySelector(`#${side}Text`),
+            send: root.querySelector(`#${side}Send`),
+            older: root.querySelector(`#${side}Older`),
+            status: root.querySelector(`#${side}Status`),
+            tok: root.querySelector(`#${side}Tok`),
+            uid: root.querySelector(`#${side}Uid`),
+            file: root.querySelector(`#${side}File`),
+            pick: root.querySelector(`#${side}Pick`),
+          };
+
+          this.el.login.onclick = () => this.login();
+          this.el.reload.onclick = () => this.loadChats();
+          this.el.send.onclick = () => this.sendText();
+          this.el.older.onclick = () => this.loadOlder();
+          this.el.pick.onclick = () => this.el.file.click();
+          this.el.file.onchange = (e) => this.handleFile(e);
+
+          this.logStatus("Idle.");
+        }
+
+        logStatus(s, ok) {
+          if (ok === true)
+            this.el.status.innerHTML = `<span class="ok">●</span> ${s}`;
+          else if (ok === false)
+            this.el.status.innerHTML = `<span class="bad">●</span> ${s}`;
+          else this.el.status.textContent = s;
+        }
+
+        async login() {
+          try {
+            this.logStatus("Logging in…");
+            const res = await fetch(CONFIG.LOGIN_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                phone: this.el.phone.value.trim(),
+                password: this.el.pass.value,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.message || "Login failed");
+
+            const token = data?.token?.access_token;
+            const uid = data?.user?.user_id;
+            if (!token || !uid) throw new Error("Bad login response");
+
+            this.state.token = token;
+            this.state.uid = uid;
+            this.el.tok.textContent = token.slice(0, 24) + "…";
+            this.el.uid.textContent = "uid: " + uid;
+
+            // Auto-connect WS with fresh token
+            await this.connect(true);
+
+            // Load chat list after WS connects
+            await this.loadChats();
+            this.logStatus("Ready.", true);
+          } catch (e) {
+            console.error(e);
+            this.logStatus("Login failed: " + e.message, false);
+          }
+        }
+
+        async connect(forceNew = false) {
+          // Close previous socket if any (e.g., re-login)
+          if (forceNew && this.state.ws) {
+            try {
+              this.state.ws.close();
+            } catch {}
+            this.state.ws = null;
+          }
+          if (!this.state.token) {
+            this.logStatus("Login first", false);
+            return;
+          }
+
+          const url = `${CONFIG.WS_URL}/?token=${encodeURIComponent(
+            this.state.token
+          )}`;
+          const ws = new WebSocket(url);
+          this.state.ws = ws;
+
+          return new Promise((resolve) => {
+            ws.onopen = () => {
+              this.logStatus("WS connected", true);
+              resolve();
+            };
+            ws.onclose = () => this.logStatus("WS closed", false);
+            ws.onerror = (e) => {
+              console.error("ws error", e);
+              this.logStatus("WS error", false);
+            };
+
+            ws.onmessage = (ev) => {
+              let m;
+              try {
+                m = JSON.parse(ev.data);
+              } catch {
+                return;
+              }
+              if (m.type === "READY") {
+                this.logStatus(`READY (uid=${m.uid})`, true);
+              } else if (m.type === "HISTORY") {
+                if (m.items?.length) {
+                  this.state.oldestId = m.items[0].id;
+                  this.prependMsgs(m.items);
+                }
+              } else if (m.type === "ACK") {
+                // Use stored pending kind + media so images render immediately
+                const kind = this._pendingKind || "text";
+                const media = this._pendingMedia || null;
+                const text =
+                  kind === "image" ? "[image]" : this._pendingText || "(sent)";
+                this.pushMsg("me", text, m.ts || Date.now(), m.id, kind, media);
+                this._pendingText = "";
+                this._pendingKind = "text";
+                this._pendingMedia = null;
+              } else if (m.type === "MSG") {
+                const mine = String(m.from) === String(this.state.uid);
+                if (!mine) {
+                  this.pushMsg(
+                    "peer",
+                    m.kind === "image" ? "[image]" : m.text || "[non-text]",
+                    m.ts || Date.now(),
+                    m.id,
+                    m.kind,
+                    m.media
+                  );
+                }
+                const row = this.chatList.find((x) => x.cid === m.cid);
+                if (row) {
+                  const preview =
+                    m.kind === "image" ? "🖼️ Image" : m.text || "";
+                  row.last = { text: preview, ts: m.ts, kind: m.kind };
+                  row.last_ts = m.ts;
+                  this.renderChatList();
+                }
+              } else if (m.type === "ERROR") {
+                this.logStatus(
+                  `Error: ${m.code || ""} ${m.detail || ""}`,
+                  false
+                );
+              }
+            };
+          });
+        }
+
+        async loadChats() {
+          if (!this.state.token) return;
+          try {
+            const res = await fetch(`${CONFIG.HTTP_BASE}/chats`, {
+              headers: { Authorization: `Bearer ${this.state.token}` },
+            });
+            if (!res.ok) {
+              const body = await res.text().catch(() => "");
+              console.warn("/chats failed", res.status, body);
+              this.logStatus("Failed to load chats", false);
+              return;
+            }
+            const data = await res.json();
+            this.chatList = (data.items || []).sort(
+              (a, b) => (b.last_ts || 0) - (a.last_ts || 0)
+            );
+            this.renderChatList();
+          } catch (e) {
+            console.error(e);
+            this.logStatus("Failed to load chats", false);
+          }
+        }
+
+        renderChatList() {
+          this.el.chats.innerHTML = "";
+          for (const row of this.chatList) {
+            const li = document.createElement("div");
+            li.className = "chatItem";
+            const initials = (row.profile?.name || `U ${row.peer}`)
+              .split(" ")
+              .map((s) => s[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
+            const avatar = row.profile?.avatar;
+            const preview =
+              row.last && row.last.kind === "image"
+                ? "🖼️ Image"
+                : row.last?.text || "";
+            li.innerHTML = `
+        <div class="avatar">${
+          avatar ? `<img src="${avatar}" alt="">` : `${escapeHtml(initials)}`
+        }</div>
+        <div class="chatMeta">
+          <div class="chatName">${escapeHtml(
+            row.profile?.name || `User ${row.peer}`
+          )}</div>
+          <div class="chatPreview">${escapeHtml(preview)} ${
+              row.last?.ts ? "• " + fmtTs(row.last.ts) : ""
+            }</div>
+        </div>`;
+            li.onclick = () => this.openChat(row);
+            this.el.chats.appendChild(li);
+          }
+        }
+
+        openChat(row) {
+          this.state.peer = String(row.peer);
+          this.state.cid = row.cid;
+          this.el.msgs.innerHTML = "";
+          this.state.oldestId = null;
+
+          if (!this.state.ws) {
+            this.logStatus("WS not connected", false);
+            return;
+          }
+          this.state.ws.send(
+            JSON.stringify({ type: "JOIN", peer: this.state.peer })
+          );
+          this.state.ws.send(
+            JSON.stringify({
+              type: "BACKFILL",
+              peer: this.state.peer,
+              limit: 50,
+            })
+          );
+          this.logStatus(
+            `Opened ${row.profile?.name || "User " + row.peer}`,
+            true
+          );
+        }
+
+        loadOlder() {
+          if (!this.state.ws || !this.state.peer)
+            return this.logStatus("Open a chat first", false);
+          if (!this.state.oldestId)
+            return this.logStatus("No older messages", false);
+          this.state.ws.send(
+            JSON.stringify({
+              type: "BACKFILL",
+              peer: this.state.peer,
+              sinceId: this.state.oldestId,
+              limit: 50,
+            })
+          );
+        }
+
+        pushMsg(who, text, ts, id, kind = "text", media = null) {
+          const div = document.createElement("div");
+          div.className = "msg " + (who === "me" ? "me" : "peer");
+          let body = "";
+          if (kind === "image" && media?.url) {
+            body = `<a href="${media.url}" target="_blank" rel="noreferrer">
+                      <img src="${media.url}" alt="image message">
+                    </a>`;
+          } else {
+            body = `<div>${escapeHtml(text || "")}</div>`;
+          }
+          div.innerHTML = `${body}<div class="meta">${
+            who === "me" ? "You" : "Peer"
+          } • ${fmtTs(ts)}</div>`;
+          div.dataset.id = id || "";
+          this.el.msgs.appendChild(div);
+          this.el.msgs.scrollTop = this.el.msgs.scrollHeight;
+        }
+
+        prependMsgs(items) {
+          const before = this.el.msgs.scrollHeight - this.el.msgs.scrollTop;
+          const frag = document.createDocumentFragment();
+          items.forEach((it) => {
+            const who =
+              String(it.from) === String(this.state.uid) ? "me" : "peer";
+            const kind = it.kind || "text";
+            const media = it.media || null;
+            let body = "";
+            if (kind === "image" && media?.url) {
+              body = `<a href="${media.url}" target="_blank" rel="noreferrer">
+                        <img src="${media.url}" alt="image message">
+                      </a>`;
+            } else {
+              body = `<div>${escapeHtml(it.text || "[non-text]")}</div>`;
+            }
+            const div = document.createElement("div");
+            div.className = "msg " + (who === "me" ? "me" : "peer");
+            div.innerHTML = `${body}<div class="meta">${
+              who === "me" ? "You" : "Peer"
+            } • ${fmtTs(it.ts)}</div>`;
+            div.dataset.id = it.id || "";
+            frag.appendChild(div);
+          });
+          this.el.msgs.insertBefore(frag, this.el.msgs.firstChild);
+          this.el.msgs.scrollTop = this.el.msgs.scrollHeight - before;
+        }
+
+        sendText() {
+          if (!this.state.ws) return this.logStatus("WS not connected", false);
+          if (!this.state.peer)
+            return this.logStatus("Open a chat first", false);
+          const text = this.el.text.value;
+          if (!text) return;
+          const client_mid = "c-" + Math.random().toString(36).slice(2, 10);
+          this._pendingText = text;
+          this._pendingKind = "text";
+          this._pendingMedia = null;
+          this.state.ws.send(
+            JSON.stringify({
+              type: "SEND",
+              peer: this.state.peer,
+              kind: "text",
+              text,
+              client_mid,
+            })
+          );
+          this.el.text.value = "";
+        }
+
+        async handleFile(e) {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          if (!this.state.peer)
+            return this.logStatus("Open a chat first", false);
+          if (!this.state.token) return this.logStatus("Login first", false);
+
+          try {
+            this.logStatus("Uploading image…");
+            const media = await uploadChatImage({
+              token: this.state.token,
+              peer: this.state.peer,
+              file,
+            });
+            const client_mid = "c-" + Math.random().toString(36).slice(2, 10);
+            this._pendingText = "";
+            this._pendingKind = "image";
+            this._pendingMedia = media;
+            this.state.ws.send(
+              JSON.stringify({
+                type: "SEND",
+                peer: this.state.peer,
+                kind: "image",
+                text: "",
+                media,
+                client_mid,
+              })
+            );
+            this.logStatus("Image sent", true);
+          } catch (err) {
+            console.error(err);
+            this.logStatus("Image upload failed", false);
+          }
+        }
+      }
+
+      // Wire both panes
+      const A = new ChatClient(document, "a");
+      const B = new ChatClient(document, "b");
+    </script>
+  </body>
+</html>

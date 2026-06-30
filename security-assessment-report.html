@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OWASP Top 10 Security Assessment Report</title>
+<style>
+  :root {
+    --high: #c0392b;
+    --medium: #d68910;
+    --low: #2471a3;
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --border: #e1e4e8;
+    --text: #1f2328;
+    --muted: #57606a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    line-height: 1.55;
+  }
+  header {
+    background: #111827;
+    color: #fff;
+    padding: 32px 24px;
+  }
+  header h1 {
+    margin: 0 0 8px 0;
+    font-size: 26px;
+  }
+  header p {
+    margin: 2px 0;
+    color: #c7cbd1;
+    font-size: 14px;
+  }
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .summary-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .counts {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .count-pill {
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .count-pill.high { background: var(--high); }
+  .count-pill.medium { background: var(--medium); }
+  .count-pill.low { background: var(--low); }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .toc h2 { margin-top: 0; font-size: 16px; }
+  .toc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+  }
+  .toc li a {
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  .toc li a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 4px;
+    color: #fff;
+    margin-right: 8px;
+  }
+  .badge.high { background: var(--high); }
+  .badge.medium { background: var(--medium); }
+  .badge.low { background: var(--low); }
+  .vuln {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .vuln.high { border-left-color: var(--high); }
+  .vuln.medium { border-left-color: var(--medium); }
+  .vuln h3 {
+    margin: 0 0 10px 0;
+    font-size: 17px;
+  }
+  .vuln h3 code {
+    font-size: 14px;
+    background: #eef0f3;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .vuln dl {
+    margin: 0;
+  }
+  .vuln dt {
+    font-weight: 600;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .vuln dd {
+    margin: 4px 0 0 0;
+    font-size: 14.5px;
+  }
+  code, pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #1f2328;
+    color: #e6edf3;
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  .posture {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin-top: 28px;
+  }
+  .posture h2 { margin-top: 0; }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 24px;
+  }
+  .print-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: #111827;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    z-index: 10;
+  }
+  @media print {
+    .print-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">Save as PDF</button>
+<header>
+  <h1>OWASP Top 10 (2021) Security Assessment Report</h1>
+  <p>Target: Node.js backend monorepo — admin, driver, merchant, food, mart, wallet_payment, bfs-wallet-backend, order_management, grablike-backend, events-backend, sms-gateway-backend, Map_and_location_services, user_merchant_chat, expo_push_notification</p>
+  <p>Scope: Full codebase review. A06 (vulnerable/outdated components) excluded — managed separately.</p>
+  <p>Generated: 2026-06-19</p>
+</header>
+<div class="container">
+
+  <div class="summary-box">
+    <strong>Summary:</strong> 26 findings identified — a systemic authentication/authorization gap spans multiple services, alongside a disabled payment-signature check and exposed production secrets/keys in git history.
+    <div class="counts">
+      <span class="count-pill high">23 High</span>
+      <span class="count-pill medium">3 Medium</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h2>Findings</h2>
+    <ul>
+      <li><a href="#v1">1. Production secrets committed to git history</a></li>
+      <li><a href="#v2">2. BFS bank private signing key committed to git</a></li>
+      <li><a href="#v3">3. BFS payment-response signature verification disabled</a></li>
+      <li><a href="#v4">4. Withdrawal identity spoofable, no auth</a></li>
+      <li><a href="#v5">5. wallet_payment service has no authentication</a></li>
+      <li><a href="#v6">6. Self-registration role privilege escalation</a></li>
+      <li><a href="#v7">7. Admin user-management routes have no auth</a></li>
+      <li><a href="#v8">8. Hardcoded JWT secret fallback</a></li>
+      <li><a href="#v9">9. Admin auth commented out on offer routes</a></li>
+      <li><a href="#v10">10. requireAuth defined but never wired in</a></li>
+      <li><a href="#v11">11. PII lookup endpoints leak full user records</a></li>
+      <li><a href="#v12">12. Tip endpoint trusts caller-supplied passenger ID</a></li>
+      <li><a href="#v13">13. Driver settlement pay/adjust/reverse — no auth</a></li>
+      <li><a href="#v14">14. Refund endpoint unauthenticated</a></li>
+      <li><a href="#v15">15. Merchant profile update — cross-merchant IDOR</a></li>
+      <li><a href="#v16">16. Driver profile view/update unauthenticated</a></li>
+      <li><a href="#v17">17. Device-ID update bypasses device-lock</a></li>
+      <li><a href="#v18">18. Food/Mart menu CRUD — no auth/ownership</a></li>
+      <li><a href="#v19">19. expo_push_notification fully unauthenticated</a></li>
+      <li><a href="#v20">20. Chat identity spoofable via headers</a></li>
+      <li><a href="#v21">21. Socket.IO location updates unauthenticated</a></li>
+      <li><a href="#v22">22. RMA payment logs (bank/OTP) exposed, no auth</a></li>
+      <li><a href="#v23">23. OTP logged in plaintext on BFS debit calls</a></li>
+      <li><a href="#v24">24. Tokens/decoded JWTs logged via console.log</a></li>
+      <li><a href="#v25">25. Debug JWT-decode route exposed in production</a></li>
+      <li><a href="#v26">26. Wide-open CORS with credentials</a></li>
+    </ul>
+  </div>
+
+  <div class="vuln high" id="v1">
+    <h3><span class="badge high">High</span>1. Production secrets committed to git history</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A02 Cryptographic Failures</dd>
+      <dt>Files</dt><dd><code>.env</code> files across root, admin, driver, food, mart, merchant, order_management, ride_management, sms-gateway-backend, wallet_payment, Map_and_location_services</dd>
+      <dt>Description</dt><dd>Multiple <code>.env</code> files were tracked in git and later removed from the working tree via commits like "Stop tracking env files" — removal does not purge git history, so contents remain recoverable via <code>git show &lt;old-commit&gt;:&lt;path&gt;</code>. Confirmed exposed: MySQL root password, MongoDB Atlas connection string, JWT/access/refresh secrets, Gmail app password, Redis password (incl. production), SMTP password, SMS master key, SMPP password.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone with repo read access runs <code>git log --all --diff-filter=A -- wallet_payment/.env</code> then <code>git show &lt;commit&gt;:wallet_payment/.env</code> to recover the production DB root password and connect directly, or forge valid JWTs for every service using the shared secret.</dd>
+      <dt>Recommendation</dt><dd>Treat all these credentials as compromised — rotate immediately. Purge from git history (e.g. <code>git filter-repo</code>) and add pre-commit secret scanning.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v2">
+    <h3><span class="badge high">High</span>2. BFS bank private signing key committed to git</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A02 Cryptographic Failures</dd>
+      <dt>File</dt><dd><code>bfs-wallet-backend/keys/grab.newedge.bt.key</code></dd>
+      <dt>Description</dt><dd>The PEM private key used by <code>signChecksum()</code> to sign every outbound transaction to the bank's BFS payment switch is checked into the repo and not gitignored.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone with repo access obtains the actual merchant signing key and can forge correctly-signed BFS payment requests, impersonating the merchant to the bank outside the application entirely.</dd>
+      <dt>Recommendation</dt><dd>Rotate the key/certificate pair with the bank immediately, remove from git history, load from a secrets manager, and gitignore <code>keys/</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v3">
+    <h3><span class="badge high">High</span>3. BFS payment-response signature verification disabled</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A08 Software/Data Integrity Failures</dd>
+      <dt>Files</dt><dd><code>bfs-wallet-backend/src/utils/bfsChecksum.js:35-44</code>, <code>bfs-wallet-backend/src/services/bfsClient.js:155-164</code></dd>
+      <dt>Description</dt><dd><code>verifyChecksum</code> is fully commented out. Every BFS response is trusted unconditionally — wallet credit is triggered purely on <code>bfs_responseCode</code>/<code>bfs_debitAuthCode === "00"</code> with no cryptographic verification the response came from BFS unmodified.</dd>
+      <dt>Exploit Scenario</dt><dd>A man-in-the-middle on the path to the BFS API can return a forged success code for a transaction the bank never approved, causing the platform to credit a wallet for a payment that never happened.</dd>
+      <dt>Recommendation</dt><dd>Re-enable <code>verifyChecksum</code> on every BFS response before trusting the result code; fail closed on missing/invalid checksum; enforce TLS to all BFS endpoints.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v4">
+    <h3><span class="badge high">High</span>4. Withdrawal identity spoofable, no auth</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>bfs-wallet-backend/src/controllers/withdrawals.controller.js:16-30</code>, <code>bfs-wallet-backend/src/routes/withdrawals.routes.js:7-18</code></dd>
+      <dt>Description</dt><dd>Identity is read from <code>req.body.user_id</code>/<code>x-user-id</code>/<code>x-admin-id</code>. Existing <code>requireUserAuth</code>/<code>requireAdminAuth</code> middleware is never imported anywhere.</dd>
+      <dt>Exploit Scenario</dt><dd>A request with an arbitrary <code>user_id</code> initiates a withdrawal from a victim's wallet to attacker-controlled bank details; an admin-approval endpoint can be hit with just an <code>x-admin-id</code> header, no credentials.</dd>
+      <dt>Recommendation</dt><dd>Apply <code>requireUserAuth</code>/<code>requireAdminAuth</code>; derive identity from a verified JWT, never from body/header values.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v5">
+    <h3><span class="badge high">High</span>5. wallet_payment service has no authentication</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>wallet_payment/server.js:57-61</code>, <code>walletRoutes.js</code>, <code>transactionHistoryRoutes.js</code>, <code>walletTransactionLogRoutes.js</code></dd>
+      <dt>Description</dt><dd>Only request-ID middleware is applied — no route imports authentication. No auth middleware file even exists for this service.</dd>
+      <dt>Exploit Scenario</dt><dd><code>GET /wallet/getbyuser/7</code> returns any user's wallet balance and T-PIN status with no credentials; <code>/transactions/getall</code> dumps every user's full transaction history.</dd>
+      <dt>Recommendation</dt><dd>Add JWT-based authentication binding the caller to their own user/wallet; restrict admin-style dump endpoints to admin auth.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v6">
+    <h3><span class="badge high">High</span>6. Self-registration role privilege escalation</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>driver/controllers/registrationController.js:78</code> (also 58-61, 191), <code>driver/routes/registrationRoute.js:144</code></dd>
+      <dt>Description</dt><dd><code>registerUser</code> sets the new user's role directly from request body with no allowlist; code explicitly special-cases <code>role === "admin"</code>.</dd>
+      <dt>Exploit Scenario</dt><dd>A public registration call with <code>role: "admin"</code> creates an admin row; the attacker logs in and receives a JWT with admin role, passing all downstream admin checks — full admin takeover with zero prerequisites.</dd>
+      <dt>Recommendation</dt><dd>Strip/ignore client-supplied <code>role</code> on public registration; only allow privileged account creation via an already-authenticated admin-only endpoint.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v7">
+    <h3><span class="badge high">High</span>7. Admin user-management routes have no auth</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>File</dt><dd><code>admin/routes/adminRoute.js:40-64</code></dd>
+      <dt>Description</dt><dd><code>GET /users</code>, <code>/drivers</code>, <code>/admins</code>, <code>/merchants</code>, <code>/organizers</code>, plus deactivate/activate/delete have rate-limiting and param validation only — <code>auth</code>/<code>ensureAdmin</code> is imported but only applied to unrelated routes lower in the file.</dd>
+      <dt>Exploit Scenario</dt><dd>Anonymous <code>GET /api/admin/admins</code> discloses every admin account; anonymous <code>DELETE /api/admin/delete/5</code> deletes any user, including other admins, with zero credentials.</dd>
+      <dt>Recommendation</dt><dd>Add <code>auth, ensureAdmin</code> to every route in this file, matching the pattern already used elsewhere in it.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v8">
+    <h3><span class="badge high">High</span>8. Hardcoded JWT secret fallback</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A02 Cryptographic Failures</dd>
+      <dt>File</dt><dd><code>admin/middleware/adminAuth.js:4-5</code></dd>
+      <dt>Description</dt><dd><code>const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "your_access_token_secret_here";</code> — falls back to a hardcoded value visible in source if the env var is ever unset, unlike the sibling <code>auth.js</code> which fails closed.</dd>
+      <dt>Exploit Scenario</dt><dd>In any deployment where the env var is missing, an attacker signs a token with the known default string and passes admin auth entirely.</dd>
+      <dt>Recommendation</dt><dd>Remove the fallback; throw at startup if <code>ACCESS_TOKEN_SECRET</code> is missing.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v9">
+    <h3><span class="badge high">High</span>9. Admin auth commented out on offer routes</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>File</dt><dd><code>grablike-backend/src/routes/admin/offerRoutes.js:9</code></dd>
+      <dt>Description</dt><dd><code>// router.use(authenticateToken, isAdmin);</code> is disabled, while the surrounding comment claims all admin routes require authentication.</dd>
+      <dt>Exploit Scenario</dt><dd>Any unauthenticated user can create unlimited high-value discount offers or delete legitimate ones, directly affecting platform revenue.</dd>
+      <dt>Recommendation</dt><dd>Restore <code>router.use(requireAuth, isAdmin)</code> (note: the correct export in this codebase is <code>requireAuth</code>, not <code>authenticateToken</code>).</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v10">
+    <h3><span class="badge high">High</span>10. requireAuth defined but never wired in</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>grablike-backend/src/middleware/requireAuth.js</code>, <code>grablike-backend/src/index.js:84-192</code></dd>
+      <dt>Description</dt><dd><code>requireAuth</code> implements correct JWT verification but is referenced only in doc-comments — no route actually applies it as middleware.</dd>
+      <dt>Exploit Scenario</dt><dd>Every endpoint in this ride-hailing service — wallet transfers, settlements, refunds, PII lookups — is reachable by an anonymous client.</dd>
+      <dt>Recommendation</dt><dd>Apply <code>requireAuth</code> globally or per-router for all non-public routes in <code>index.js</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v11">
+    <h3><span class="badge high">High</span>11. PII lookup endpoints leak full user records</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control (IDOR / PII exposure)</dd>
+      <dt>Files</dt><dd><code>customerLookUp.js:25-28</code>, <code>driverLookup.js:39-42</code>, <code>merchantLookUp.js:31-34</code>, <code>userDetails.js:24-27</code></dd>
+      <dt>Description</dt><dd>Each runs <code>SELECT * FROM users WHERE user_id = ?</code> on an arbitrary ID from the query string, with no auth and no column allowlist.</dd>
+      <dt>Exploit Scenario</dt><dd>Sequentially requesting <code>userId=1,2,3...</code> enumerates the full PII of every user, driver, and merchant in the system.</dd>
+      <dt>Recommendation</dt><dd>Require auth, restrict results to the caller's own record (or admin role), and return an explicit non-sensitive column allowlist instead of <code>SELECT *</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v12">
+    <h3><span class="badge high">High</span>12. Tip endpoint trusts caller-supplied passenger ID</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control (IDOR)</dd>
+      <dt>File</dt><dd><code>grablike-backend/src/routes/tipsRouter.js:200-352</code></dd>
+      <dt>Description</dt><dd><code>POST /tips/ride/:ride_id</code> reads <code>passenger_user_id</code> from the body and debits that wallet directly, without verifying it matches the ride's actual passenger or an authenticated caller.</dd>
+      <dt>Exploit Scenario</dt><dd>An attacker who knows any <code>ride_id</code> and a victim's <code>passenger_user_id</code> can drain the victim's wallet into a driver's wallet on an unrelated ride.</dd>
+      <dt>Recommendation</dt><dd>Require auth; derive <code>passenger_user_id</code> from the verified token and confirm it matches <code>ride.passenger_id</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v13">
+    <h3><span class="badge high">High</span>13. Driver settlement pay/adjust/reverse — no auth</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>grablike-backend/src/routes/drivers.settlement.routes.js:15-24</code>, <code>driverSettlement.controller.js</code></dd>
+      <dt>Description</dt><dd>Real money movement and ledger adjustments of arbitrary signed amount, mounted with zero middleware.</dd>
+      <dt>Exploit Scenario</dt><dd>A request with a negative <code>amount_cents</code> erases a driver's owed balance with no credentials; the pay endpoint moves real funds out of any driver's wallet.</dd>
+      <dt>Recommendation</dt><dd>Require <code>requireAuth</code> + admin-role check on this entire router.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v14">
+    <h3><span class="badge high">High</span>14. Refund endpoint unauthenticated</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>grablike-backend/src/routes/refund.routes.js:6</code>, <code>refund.controller.js:6-92</code></dd>
+      <dt>Description</dt><dd><code>POST /finance/refund-ride</code> takes only <code>{ride_id, reason}</code> with no auth, flips ride status to refunded, and pushes a notification to the real passenger.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone can mark any ride as refunded, corrupting financial records and sending a false "refunded" notification to a real customer.</dd>
+      <dt>Recommendation</dt><dd>Require <code>requireAuth</code> + admin role.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v15">
+    <h3><span class="badge high">High</span>15. Merchant profile update — cross-merchant IDOR</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control (IDOR)</dd>
+      <dt>Files</dt><dd><code>merchant/controllers/updateMerchantController.js:39-123</code>, <code>merchant/routes/updateMerchantRoute.js:89-99</code></dd>
+      <dt>Description</dt><dd><code>PUT /merchant-business/:business_id</code> requires a valid merchant JWT but never compares <code>business_id</code> in the URL to the authenticated merchant's own ID.</dd>
+      <dt>Exploit Scenario</dt><dd>Merchant A, with a valid token, calls the endpoint with merchant B's <code>business_id</code> and overwrites B's bank account details, QR code, and pricing.</dd>
+      <dt>Recommendation</dt><dd>After auth, verify the business's owning <code>user_id</code> matches <code>req.user.user_id</code> before allowing the update.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v16">
+    <h3><span class="badge high">High</span>16. Driver profile view/update unauthenticated</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>driver/routes/profileRoute.js:45,49-63</code>, <code>profileController.js</code></dd>
+      <dt>Description</dt><dd><code>GET /:user_id</code> and <code>PUT /:user_id</code> have numeric-param validation and rate limiting only — no auth, and the controller never verifies caller identity.</dd>
+      <dt>Exploit Scenario</dt><dd>Requesting any <code>user_id</code> discloses a victim's PII with no credentials; updating it overwrites the victim's email/photo with no auth.</dd>
+      <dt>Recommendation</dt><dd>Add JWT auth and verify <code>req.user.user_id === req.params.user_id</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v17">
+    <h3><span class="badge high">High</span>17. Device-ID update bypasses device-lock</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>driver/routes/deviceRoute.js:5</code>, <code>updateDeviceController.js:3-103</code></dd>
+      <dt>Description</dt><dd><code>PUT /device/update</code> takes <code>{user_id, role, deviceID}</code> from the body with no auth and overwrites the device bound for the single-device login lock.</dd>
+      <dt>Exploit Scenario</dt><dd>An attacker who knows a victim's <code>user_id</code>/role overwrites the victim's bound device with their own, clearing the lock that would otherwise block login from unrecognized devices.</dd>
+      <dt>Recommendation</dt><dd>Require auth; bind <code>user_id</code> to the verified token, never to body input.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v18">
+    <h3><span class="badge high">High</span>18. Food/Mart menu CRUD — no auth/ownership</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>food/routes/foodMenuRoute.js:75,89-95,97</code>, <code>mart/routes/martMenuRoutes.js:75,93-99,102</code></dd>
+      <dt>Description</dt><dd>Write routes have rate-limiting and numeric-param validation only — no auth, no check that the caller owns <code>business_id</code>.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone can inject menu items into a competitor's store, delete any business's items, or change prices/availability at any restaurant/mart.</dd>
+      <dt>Recommendation</dt><dd>Require merchant auth and verify <code>business_id</code> ownership on write routes.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v19">
+    <h3><span class="badge high">High</span>19. expo_push_notification fully unauthenticated</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>File</dt><dd><code>expo_push_notification/routes/pushRoutes.js:1-23</code></dd>
+      <dt>Description</dt><dd><code>POST /api/push/send</code>, <code>/send-bulk</code>, <code>GET /api/push/tokens/:user_id</code>, <code>/history/:user_id</code>, register/delete token — zero auth/API-key check on any route.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone can read a user's raw device push token, send arbitrary notification content to any user (phishing/spam), or read notification history containing order/PII details.</dd>
+      <dt>Recommendation</dt><dd>Require service-to-service or user-bound authentication on every route in this service.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v20">
+    <h3><span class="badge high">High</span>20. Chat identity spoofable via headers</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>File</dt><dd><code>user_merchant_chat/controllers/chatController.js:65-107</code></dd>
+      <dt>Description</dt><dd>The caller's role/ID is taken directly from <code>x-user-type</code>/<code>x-user-id</code>/<code>x-business-id</code> headers with no JWT/session verification anywhere in the service.</dd>
+      <dt>Exploit Scenario</dt><dd>Setting <code>x-user-type: CUSTOMER</code> and <code>x-user-id: &lt;victim&gt;</code> reads another user's full chat history, or sends messages impersonating that user.</dd>
+      <dt>Recommendation</dt><dd>Derive identity from a verified JWT, not client-supplied headers.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v21">
+    <h3><span class="badge high">High</span>21. Socket.IO location updates unauthenticated</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A01 Broken Access Control</dd>
+      <dt>Files</dt><dd><code>Map_and_location_services/socket/index.js:7-34</code>, <code>locationController.js:16-74</code></dd>
+      <dt>Description</dt><dd>The socket connection handler performs no handshake authentication; the location-update event takes <code>user_id</code> directly from the client payload with no ownership check.</dd>
+      <dt>Exploit Scenario</dt><dd>Any client can connect without a token and emit a location update with an arbitrary <code>user_id</code> to spoof any driver's live GPS location or online status, broadcast to all connected riders.</dd>
+      <dt>Recommendation</dt><dd>Require a verified JWT in the socket handshake; derive <code>user_id</code> from the verified token, never the event payload.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v22">
+    <h3><span class="badge high">High</span>22. RMA payment logs (bank/OTP) exposed, no auth</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A09 Security Logging Failures / A01</dd>
+      <dt>File</dt><dd><code>bfs-wallet-backend/src/routes/rmaLogRoutes.js:12,16</code> (mounted at <code>/api/rma</code> with no auth)</dd>
+      <dt>Description</dt><dd>The full raw request/response for every BFS exchange is persisted, including the remitter's bank account number and OTP as plain parameters. The log-retrieval routes have zero auth.</dd>
+      <dt>Exploit Scenario</dt><dd>An unauthenticated request to the logs endpoint lets an attacker harvest real customer bank account numbers and any OTPs logged before they expire.</dd>
+      <dt>Recommendation</dt><dd>Auth-gate <code>/api/rma/*</code> behind admin auth; redact/never persist account numbers or OTPs in plaintext.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln high" id="v23">
+    <h3><span class="badge high">High</span>23. OTP logged in plaintext on BFS debit calls</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A09 Security Logging Failures</dd>
+      <dt>File</dt><dd><code>events-backend/src/services/bfs.js:7</code></dd>
+      <dt>Description</dt><dd>The shared logger for all BFS calls logs the full request body via <code>console.log</code>, including the OTP a user enters to authorize a bank debit — bypassing the project's redacting logger.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone with server/container log access recovers OTPs for in-flight payments and can attempt to replay them within the validity window.</dd>
+      <dt>Recommendation</dt><dd>Redact <code>otp</code> and account fields before logging; never log full request bodies on payment-debit calls.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln medium" id="v24">
+    <h3><span class="badge medium">Medium</span>24. Tokens/decoded JWTs logged via console.log</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A09 Security Logging Failures</dd>
+      <dt>Files</dt><dd><code>admin/middleware/adminAuth.js:74</code>, <code>admin/middleware/auth.js:52</code>, <code>merchant/middlewares/authUser.js:24-29,40-41</code></dd>
+      <dt>Description</dt><dd>These log decoded admin claims or raw bearer tokens directly to stdout on the hot auth path, bypassing the shared redacting logger.</dd>
+      <dt>Exploit Scenario</dt><dd>Anyone with log access obtains valid bearer tokens or decoded admin identity claims, which can be replayed directly against the API.</dd>
+      <dt>Recommendation</dt><dd>Remove these debug log lines from production code paths.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln medium" id="v25">
+    <h3><span class="badge medium">Medium</span>25. Debug JWT-decode route exposed in production</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A05 Security Misconfiguration</dd>
+      <dt>Files</dt><dd><code>bfs-wallet-backend/src/routes/debugRoutes.js:6-17</code>, mounted unconditionally in <code>app.js:9,45</code></dd>
+      <dt>Description</dt><dd><code>GET /api/debug/jwt</code> decodes and echoes any submitted JWT's payload with no auth and no environment gating, unlike the equivalent guard present in <code>wallet_payment/server.js:48</code>.</dd>
+      <dt>Exploit Scenario</dt><dd>An attacker uses this endpoint to test forged/stolen tokens against the real secret and inspect payload shape for crafting privilege-escalation tokens.</dd>
+      <dt>Recommendation</dt><dd>Remove or gate this route behind <code>NODE_ENV !== 'production'</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="vuln medium" id="v26">
+    <h3><span class="badge medium">Medium</span>26. Wide-open CORS with credentials</h3>
+    <dl>
+      <dt>OWASP Category</dt><dd>A05 Security Misconfiguration</dd>
+      <dt>Files</dt><dd><code>food/server.js:35</code>, <code>mart/server.js:36</code></dd>
+      <dt>Description</dt><dd>Both use <code>cors({ origin: true, credentials: true })</code> unconditionally. This reflects whatever Origin header the requester sends and allows it, combined with credentials enabled.</dd>
+      <dt>Exploit Scenario</dt><dd>A malicious web page can issue credentialed cross-origin requests to these APIs and have responses readable by script, weakening origin isolation for any cookie-based or browser-stored-credential flow.</dd>
+      <dt>Recommendation</dt><dd>Replace <code>origin: true</code> with an explicit allowlist of trusted frontend origins; drop <code>credentials: true</code> unless cookie-based auth is actually used.</dd>
+    </dl>
+  </div>
+
+  <div class="posture">
+    <h2>Overall Security Posture Summary</h2>
+    <p>This backend exhibits a <strong>systemic, cross-service breakdown of authentication and authorization</strong> rather than isolated bugs: in multiple services (wallet_payment, grablike-backend, expo_push_notification, parts of admin/driver/merchant/food/mart, and the location Socket.IO layer), authentication middleware either does not exist, exists but is never wired into routes, or is explicitly disabled in source. This pattern directly enables critical financial abuse — unauthenticated wallet transfers, settlement adjustments, withdrawal approvals, and tip debits — and large-scale PII disclosure through unauthenticated lookup endpoints. Compounding this, the payment-integrity layer for the bank gateway (BFS) has its response-checksum verification commented out, meaning payment confirmations are currently trusted without cryptographic proof of authenticity, and the bank's private signing key, along with multiple generations of production database/JWT/SMTP/Redis credentials, are recoverable from git history even though current <code>.gitignore</code> rules hide them from a fresh checkout. Positively, the engineering team has clearly invested in some good patterns — bcrypt at an adequate cost factor, parameterized SQL/Prisma queries throughout (no SQL injection was found anywhere in the codebase), a centralized redacting logger and error handler, and amount validation guarding most wallet debit/credit paths against negative or non-numeric values — but these controls are undermined by the access-control and secret-management gaps above. Given the severity and breadth of the access-control findings on money-movement endpoints and the compromised payment-integrity check, this backend should not be considered production-ready for a payment-handling clearance until the High-severity findings (secret rotation, route-level auth enforcement across all services, and re-enabling BFS checksum verification) are remediated and independently re-verified.</p>
+  </div>
+
+</div>
+<footer>
+  Generated by Claude Code &middot; OWASP Top 10 (2021) methodology &middot; Internal use — do not distribute externally without redaction
+</footer>
+</body>
+</html>

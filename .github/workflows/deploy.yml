@@ -381,7 +381,7 @@ jobs:
     if: needs.changes.outputs.any == 'true'
 
     env:
-      KUBECONFIG: /home/software/.kube/config
+      KUBECONFIG: /home/bir_newedge/.kube/config
       NAMESPACE: prod
       DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
       SHA: ${{ github.sha }}

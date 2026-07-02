@@ -19,5 +19,3 @@ bfs-wallet-backend/
 │  │   └─ paymentController.js
 │  └─ routes/
 │      └─ paymentRoutes.js
-# Deploy trigger Wed Jul  1 01:04:13 +06 2026
-# Final trigger Wed Jul  1 01:20:42 +06 2026

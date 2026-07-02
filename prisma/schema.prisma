@@ -392,7 +392,7 @@ model driver_vehicles {
   driver_id          BigInt    @db.UnsignedBigInt
   make               String    @db.VarChar(50)
   model              String    @db.VarChar(50)
-  year               Int       @db.UnsignedSmallInt
+  year               Int       @db.SmallInt
   color              String    @db.VarChar(30)
   license_plate      String    @unique(map: "license_plate") @db.VarChar(20)
   vehicle_type       String    @db.VarChar(20)
@@ -1770,8 +1770,8 @@ model user_vouchers {
 model users {
   user_id                   BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
   user_name                 String                      @db.VarChar(50)
-  email                     String                      @unique(map: "users_email_unique") @db.VarChar(100)
-  phone                     String                      @unique(map: "users_phone_unique") @db.VarChar(20)
+  email                     String                      @db.VarChar(100)
+  phone                     String                      @db.VarChar(20)
   password_hash             String                      @db.VarChar(255)
   role                      String                      @default("user") @db.VarChar(20)
   points                    BigInt                      @default(0) @db.UnsignedBigInt
@@ -1807,9 +1807,10 @@ model users {
   user_devices              user_devices[]
   user_verification         user_verification[]
   wishlists                 wishlists[]
-  account_deletion_requests account_deletion_requests[]
 
   @@unique([cid, role], map: "users_cid_role_unique")
+  @@unique([email, role], map: "users_email_role_unique")
+  @@unique([phone, role], map: "users_phone_role_unique")
   @@index([is_active], map: "is_active")
   @@index([role], map: "role")
 }
@@ -2506,25 +2507,4 @@ enum ride_fare_counters_status {
   rejected
   withdrawn
   expired
-}
-
-model account_deletion_requests {
-  request_id   BigInt                            @id @default(autoincrement()) @db.UnsignedBigInt
-  user_id      BigInt?                           @db.UnsignedBigInt
-  reason       String?                           @db.Text
-  status       account_deletion_requests_status @default(pending)
-  requested_at DateTime                          @default(now()) @db.Timestamp(0)
-  resolved_at  DateTime?                         @db.Timestamp(0)
-  resolved_by  BigInt?                           @db.UnsignedBigInt
-  reject_note  String?                           @db.VarChar(500)
-  users        users?                            @relation(fields: [user_id], references: [user_id], onDelete: SetNull, map: "fk_adr_user")
-
-  @@index([status, requested_at], map: "idx_adr_status_date")
-  @@index([user_id], map: "idx_adr_user")
-}
-
-enum account_deletion_requests_status {
-  pending
-  approved
-  rejected
 }

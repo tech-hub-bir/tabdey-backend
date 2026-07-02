@@ -93,6 +93,28 @@ function isAdminRole(role) {
   );
 }
 
+function normalizeRole(raw) {
+  if (raw == null) return null;
+
+  const value = String(raw).trim().toLowerCase();
+
+  const aliases = {
+    superadmin: "super_admin",
+    "super admin": "super_admin",
+  };
+
+  return aliases[value] || value || null;
+}
+
+const ALLOWED_REGISTRATION_ROLES = [
+  "user",
+  "merchant",
+  "driver",
+  "organizer",
+  "finance",
+  "admin",
+];
+
 /* ===================== SMS GATEWAY ===================== */
 
 async function sendViaGateway({ to, text, from }) {
@@ -346,6 +368,7 @@ async function buildNormalLoginResponse({ user, deviceId, desktop = false }) {
 exports.sendSmsOtp = async (req, res) => {
   try {
     const phone = normalizePhone(req.body.phone);
+    const role = normalizeRole(req.body.role);
 
     if (!phone) {
       return res.status(400).json({
@@ -354,17 +377,36 @@ exports.sendSmsOtp = async (req, res) => {
       });
     }
 
-    const existingUser = await prisma.users.findFirst({
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        message: "Role is required.",
+      });
+    }
+
+    if (!ALLOWED_REGISTRATION_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid role. Allowed roles are user, merchant, driver, organizer, finance and admin.",
+      });
+    }
+
+    const existingAccounts = await prisma.users.findMany({
       where: {
         OR: [{ phone: phone }, { phone: `+${phone}` }],
       },
-      select: { user_id: true },
+      select: { user_id: true, role: true },
     });
 
-    if (existingUser) {
+    const sameRoleExists = existingAccounts.some(
+      (account) => normalizeRole(account.role) === role,
+    );
+
+    if (sameRoleExists) {
       return res.status(400).json({
         success: false,
-        message: "Phone already registered. OTP not sent.",
+        message: `This phone number is already registered under the ${role} role.`,
       });
     }
 

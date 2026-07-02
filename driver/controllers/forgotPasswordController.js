@@ -56,6 +56,29 @@ function makeOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function normalizeRole(raw) {
+  if (raw == null) return null;
+
+  const value = String(raw).trim().toLowerCase();
+
+  const aliases = {
+    superadmin: "super_admin",
+    "super admin": "super_admin",
+  };
+
+  return aliases[value] || value || null;
+}
+
+const ALLOWED_ACCOUNT_ROLES = [
+  "user",
+  "merchant",
+  "driver",
+  "organizer",
+  "finance",
+  "admin",
+  "super_admin",
+];
+
 async function sendSmsGateway({ to, text, from }) {
   if (!SMS_MASTER_KEY) throw new Error("SMS_MASTER_KEY missing in .env");
 
@@ -79,16 +102,16 @@ async function sendSmsGateway({ to, text, from }) {
  * We check DB using candidates from raw input.
  * If user found, we then normalize the stored phone for sending.
  */
-async function findUserByPhoneNoNormalize(inputPhone) {
+async function findUserByPhoneNoNormalize(inputPhone, role) {
   const candidates = buildLookupCandidates(inputPhone);
   if (!candidates.length) return { user: null, gatewayPhone: null };
 
-  // ✅ Using Prisma to find user by multiple phone candidates
+  // ✅ Using Prisma to find user by multiple phone candidates, scoped to role
   let user = null;
 
   for (const candidate of candidates) {
     const found = await prisma.users.findFirst({
-      where: { phone: candidate },
+      where: { phone: candidate, role },
       select: { user_id: true, role: true, phone: true },
     });
 
@@ -117,13 +140,25 @@ async function findUserByPhoneNoNormalize(inputPhone) {
 exports.sendOtpSms = async (req, res) => {
   try {
     const inputPhone = req.body.phone;
+    const role = normalizeRole(req.body.role);
 
-    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(inputPhone);
+    if (!role) {
+      return res.status(400).json({ error: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Invalid role." });
+    }
+
+    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(
+      inputPhone,
+      role,
+    );
 
     // ✅ IMPORTANT: don't send if not registered
     if (!user) {
       return res.status(404).json({
-        error: "This phone number is not yet registered.",
+        error: `No ${role} account was found with this phone number.`,
       });
     }
 
@@ -134,7 +169,7 @@ exports.sendOtpSms = async (req, res) => {
     }
 
     // resend cooldown 30s
-    const rlKey = `fp_sms_rl:${gatewayPhone}`;
+    const rlKey = `fp_sms_rl:${role}:${gatewayPhone}`;
     if (await redisClient.get(rlKey)) {
       return res
         .status(429)
@@ -144,7 +179,7 @@ exports.sendOtpSms = async (req, res) => {
     const otp = makeOtp();
 
     // store OTP 5 mins
-    const otpKey = `fp_sms_otp:${gatewayPhone}`;
+    const otpKey = `fp_sms_otp:${role}:${gatewayPhone}`;
     await redisClient.set(otpKey, otp, { ex: 300 });
     await redisClient.set(rlKey, "1", { ex: 30 });
 
@@ -179,16 +214,28 @@ exports.verifyOtpSms = async (req, res) => {
   try {
     const inputPhone = req.body.phone;
     const otp = String(req.body.otp || "").trim();
+    const role = normalizeRole(req.body.role);
 
     if (!inputPhone || !otp) {
       return res.status(400).json({ error: "Phone and OTP are required" });
     }
 
-    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(inputPhone);
+    if (!role) {
+      return res.status(400).json({ error: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Invalid role." });
+    }
+
+    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(
+      inputPhone,
+      role,
+    );
 
     if (!user) {
       return res.status(404).json({
-        error: "This phone number is not yet registered.",
+        error: `No ${role} account was found with this phone number.`,
       });
     }
 
@@ -198,7 +245,7 @@ exports.verifyOtpSms = async (req, res) => {
         .json({ error: "No valid phone number found for this account." });
     }
 
-    const otpKey = `fp_sms_otp:${gatewayPhone}`;
+    const otpKey = `fp_sms_otp:${role}:${gatewayPhone}`;
     const storedOtp = await redisClient.get(otpKey);
 
     if (!storedOtp)
@@ -206,7 +253,7 @@ exports.verifyOtpSms = async (req, res) => {
     if (String(storedOtp).trim() !== otp)
       return res.status(401).json({ error: "Invalid OTP" });
 
-    const verifiedKey = `fp_sms_verified:${gatewayPhone}`;
+    const verifiedKey = `fp_sms_verified:${role}:${gatewayPhone}`;
     await redisClient.set(verifiedKey, "true", { ex: 900 }); // 15 mins
     await redisClient.del(otpKey);
 
@@ -227,11 +274,20 @@ exports.resetPasswordSms = async (req, res) => {
   try {
     const inputPhone = req.body.phone;
     const newPassword = String(req.body.newPassword || "");
+    const role = normalizeRole(req.body.role);
 
     if (!inputPhone || !newPassword) {
       return res.status(400).json({
         error: "Phone and newPassword are required.",
       });
+    }
+
+    if (!role) {
+      return res.status(400).json({ error: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res.status(400).json({ error: "Invalid role." });
     }
 
     if (newPassword.trim().length < 6) {
@@ -240,11 +296,14 @@ exports.resetPasswordSms = async (req, res) => {
       });
     }
 
-    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(inputPhone);
+    const { user, gatewayPhone } = await findUserByPhoneNoNormalize(
+      inputPhone,
+      role,
+    );
 
     if (!user) {
       return res.status(404).json({
-        error: "This phone number is not yet registered.",
+        error: `No ${role} account was found with this phone number.`,
       });
     }
 
@@ -255,7 +314,7 @@ exports.resetPasswordSms = async (req, res) => {
     }
 
     // must be verified
-    const verifiedKey = `fp_sms_verified:${gatewayPhone}`;
+    const verifiedKey = `fp_sms_verified:${role}:${gatewayPhone}`;
     const verified = await redisClient.get(verifiedKey);
 
     if (!verified) {
@@ -307,6 +366,7 @@ const isValidEmail = (email) =>
 exports.sendOtp = async (req, res) => {
   try {
     const emailRaw = req.body?.email;
+    const role = normalizeRole(req.body?.role);
 
     if (!emailRaw) {
       return res
@@ -319,18 +379,31 @@ exports.sendOtp = async (req, res) => {
         .json({ success: false, message: "Invalid email address." });
     }
 
+    if (!role) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid role." });
+    }
+
     const email = normalizeEmail(emailRaw);
 
-    // ✅ Using Prisma to find user by email
+    // ✅ Using Prisma to find user by email, scoped to role
     const user = await prisma.users.findFirst({
-      where: { email: email },
+      where: { email: email, role },
       select: { user_id: true, role: true, email: true, user_name: true },
     });
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Email not found." });
+      return res.status(404).json({
+        success: false,
+        message: `No ${role} account was found with this email.`,
+      });
     }
 
     if (!isConfigured || !transporter || !from) {
@@ -341,7 +414,7 @@ exports.sendOtp = async (req, res) => {
     }
 
     // resend cooldown 30s
-    const rlKey = `fp_email_rl:${email}`;
+    const rlKey = `fp_email_rl:${role}:${email}`;
     if (await redisClient.get(rlKey)) {
       return res.status(429).json({
         success: false,
@@ -351,7 +424,7 @@ exports.sendOtp = async (req, res) => {
 
     const otp = makeOtp();
 
-    const otpKey = `fp_email_otp:${email}`;
+    const otpKey = `fp_email_otp:${role}:${email}`;
     await redisClient.set(otpKey, otp, { ex: 300 });
     await redisClient.set(rlKey, "1", { ex: 30 });
 
@@ -421,6 +494,7 @@ exports.verifyOtp = async (req, res) => {
   try {
     const emailRaw = req.body?.email;
     const otpRaw = req.body?.otp;
+    const role = normalizeRole(req.body?.role);
 
     if (!emailRaw || !otpRaw) {
       return res.status(400).json({
@@ -434,22 +508,35 @@ exports.verifyOtp = async (req, res) => {
         .json({ success: false, message: "Invalid email address." });
     }
 
+    if (!role) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid role." });
+    }
+
     const email = normalizeEmail(emailRaw);
     const otp = String(otpRaw).trim();
 
-    // ✅ ensure email exists in DB
+    // ✅ ensure email exists in DB, scoped to role
     const user = await prisma.users.findFirst({
-      where: { email: email },
+      where: { email: email, role },
       select: { user_id: true },
     });
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Email not found." });
+      return res.status(404).json({
+        success: false,
+        message: `No ${role} account was found with this email.`,
+      });
     }
 
-    const otpKey = `fp_email_otp:${email}`;
+    const otpKey = `fp_email_otp:${role}:${email}`;
     const storedOtp = await redisClient.get(otpKey);
 
     if (!storedOtp) {
@@ -467,7 +554,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // mark verified for 15 mins, clear OTP
-    const verifiedKey = `fp_email_verified:${email}`;
+    const verifiedKey = `fp_email_verified:${role}:${email}`;
     await redisClient.set(verifiedKey, "true", { ex: 900 });
     await redisClient.del(otpKey);
 
@@ -494,6 +581,7 @@ exports.resetPassword = async (req, res) => {
   try {
     const emailRaw = req.body?.email;
     const newPassword = String(req.body?.newPassword || "");
+    const role = normalizeRole(req.body?.role);
 
     if (!emailRaw || !newPassword) {
       return res.status(400).json({
@@ -506,6 +594,19 @@ exports.resetPassword = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid email address." });
     }
+
+    if (!role) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Role is required." });
+    }
+
+    if (!ALLOWED_ACCOUNT_ROLES.includes(role)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid role." });
+    }
+
     if (newPassword.trim().length < 6) {
       return res.status(400).json({
         success: false,
@@ -515,20 +616,21 @@ exports.resetPassword = async (req, res) => {
 
     const email = normalizeEmail(emailRaw);
 
-    // ✅ Using Prisma to find user
+    // ✅ Using Prisma to find user, scoped to role
     const user = await prisma.users.findFirst({
-      where: { email: email },
+      where: { email: email, role },
       select: { user_id: true, role: true },
     });
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found." });
+      return res.status(404).json({
+        success: false,
+        message: `No ${role} account was found with this email.`,
+      });
     }
 
     // must be verified
-    const verifiedKey = `fp_email_verified:${email}`;
+    const verifiedKey = `fp_email_verified:${role}:${email}`;
     const verified = await redisClient.get(verifiedKey);
     if (!verified) {
       return res.status(403).json({
@@ -539,9 +641,10 @@ exports.resetPassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // ✅ Update using Prisma
+    // ✅ Update using Prisma — scoped by user_id since email alone
+    // isn't unique (only the [email, role] pair is, per schema.prisma)
     await prisma.users.update({
-      where: { email: email },
+      where: { user_id: user.user_id },
       data: { password_hash: hashedPassword },
     });
 

@@ -23,7 +23,7 @@ const makeLimiter = ({ windowMs, max, message }) =>
 /* ---------------- limiters ---------------- */
 const otpSendLimiter = makeLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: 10,
   message: "Too many SMS OTP requests. Please try again later.",
 });
 

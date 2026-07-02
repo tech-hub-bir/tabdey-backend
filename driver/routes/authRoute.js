@@ -15,22 +15,15 @@ const makeLimiter = ({ windowMs, max, message }) =>
   });
 
 /**
- * OTP SEND: tighter (prevents spam)
  * OTP VERIFY: moderate (user may retry a few times)
  */
-const otpSendLimiter = makeLimiter({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 5,
-  message: "Too many OTP requests. Please try again later.",
-});
-
 const otpVerifyLimiter = makeLimiter({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 10,
   message: "Too many OTP verification attempts. Please try again later.",
 });
 
-router.post("/send-otp", otpSendLimiter, sendOtp);
+router.post("/send-otp", sendOtp);
 router.post("/verify-otp", otpVerifyLimiter, verifyOtp);
 
 module.exports = router;

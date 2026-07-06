@@ -40,7 +40,7 @@ async function fetchWalletByUserId(userId) {
     throw new Error("User ID is required to fetch wallet details.");
   }
 
-  const url = `${WALLET_SERVICE_BASE_URL}/wallet/wallet/getbyuser/${encodeURIComponent(
+  const url = `${WALLET_SERVICE_BASE_URL}/getbyuser/${encodeURIComponent(
     userId
   )}`;
 

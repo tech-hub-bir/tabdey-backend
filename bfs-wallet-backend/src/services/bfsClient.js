@@ -72,6 +72,7 @@ const AC_FIELDS = [
   "bfs_benfTxnTime",
   "bfs_bfsTxnId",
   "bfs_bfsTxnTime",
+  "bfs_creditAuthCode",
   "bfs_debitAuthCode",
   "bfs_debitAuthNo",
   "bfs_msgType",

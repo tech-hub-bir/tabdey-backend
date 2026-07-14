@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { prisma } = require("../lib/prisma");
 const cache = require("../services/cacheService");
+const { getRedis } = require("../config/redis");
 
 const {
   registerMerchantModel,
@@ -80,6 +81,34 @@ async function registerMerchant(req, res) {
       : fromBodyToStoredPath(b.bank_qr_code_image);
 
     const normalizedPhone = normalizeBhutanPhone(b.phone);
+    const normalizedEmailForOtp = String(b.email || "").trim().toLowerCase();
+
+    /*
+     * Server-side OTP gate.
+     *
+     * The registration wizard lets the merchant verify via either channel:
+     *   - SMS:   POST /driver/api/sms-otp/send-otp-sms + verify-otp-sms
+     *            -> sets Redis "verified_sms:{phone}"
+     *   - Email: POST /driver/api/auth/send-otp + verify-otp
+     *            -> sets Redis "verified:{email}"
+     * Accept either flag (never trusted from client fields), and consume
+     * whichever one was actually set so it cannot be replayed.
+     */
+    const redis = getRedis();
+
+    const [verifiedSmsFlag, verifiedEmailFlag] = await Promise.all([
+      redis.get(`verified_sms:${normalizedPhone}`),
+      normalizedEmailForOtp
+        ? redis.get(`verified:${normalizedEmailForOtp}`)
+        : null,
+    ]);
+
+    if (!verifiedSmsFlag && !verifiedEmailFlag) {
+      return res.status(401).json({
+        error:
+          "Phone or email not verified. Please verify the OTP sent to you before registering.",
+      });
+    }
 
     const payload = {
       user_name: b.user_name,
@@ -87,7 +116,9 @@ async function registerMerchant(req, res) {
       phone: normalizedPhone,
       cid: b.cid,
       password: b.password,
-      role: toLowerOrDefault(b.role, "merchant"),
+      // This endpoint only ever creates merchant accounts — a client-supplied
+      // role (e.g. "admin") must never be trusted (privilege escalation).
+      role: "merchant",
       business_name: b.business_name,
       business_type_ids: b.business_type_ids ?? null,
       business_types: Array.isArray(b.business_types)
@@ -120,6 +151,15 @@ async function registerMerchant(req, res) {
     };
 
     const result = await registerMerchantModel(payload);
+
+    // OTP flags are single-use — consume whichever one was set now that the
+    // account exists.
+    await Promise.all([
+      redis.del(`verified_sms:${normalizedPhone}`),
+      normalizedEmailForOtp
+        ? redis.del(`verified:${normalizedEmailForOtp}`)
+        : null,
+    ]);
 
     return res.status(201).json({
       message: "Merchant registered successfully",
@@ -266,9 +306,13 @@ async function loginByEmail(req, res) {
       return res.status(400).json({ error: "device_id is required" });
     }
 
+    // Generic message shared by "no such account" and "wrong password" so a
+    // caller cannot enumerate which email addresses have registered accounts.
+    const invalidCredentialsError = "Incorrect email or password.";
+
     const candidates = await findCandidatesByEmail(email);
     if (!candidates.length) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(401).json({ error: invalidCredentialsError });
     }
 
     let picked = null;
@@ -282,7 +326,7 @@ async function loginByEmail(req, res) {
     }
 
     if (!picked) {
-      return res.status(401).json({ error: "Incorrect password" });
+      return res.status(401).json({ error: invalidCredentialsError });
     }
 
     const user = await prisma.users.findUnique({

@@ -344,10 +344,18 @@ async function updateMerchantDetailsModel(business_id, data) {
 /* ------------------------ FINDERS ------------------------ */
 
 async function findCandidatesByEmail(email) {
-  const em = String(email || "").trim();
+  const em = String(email || "").trim().toLowerCase();
   if (!em) return [];
 
-  const allUsers = await prisma.users.findMany({
+  // Scoped to role = "merchant" only. Without this, an account registered
+  // under a different role (e.g. rider) with the same email/password would
+  // also authenticate through the merchant email-login endpoint and be
+  // issued a token for that other role.
+  return prisma.users.findMany({
+    where: {
+      email: em,
+      role: "merchant",
+    },
     orderBy: { user_id: "desc" },
     select: {
       user_id: true,
@@ -359,10 +367,6 @@ async function findCandidatesByEmail(email) {
       is_active: true,
     },
   });
-
-  return allUsers.filter(
-    (user) => user.email?.toLowerCase() === em.toLowerCase(),
-  );
 }
 
 module.exports = {

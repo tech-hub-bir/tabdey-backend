@@ -1,6 +1,8 @@
 // routes/walletRoutes.js
 const router = require("express").Router();
 const ctrl = require("../controllers/walletController");
+const authUser = require("../middleware/authUser");
+const { requireAdmin } = require("../controllers/walletController");
 
 const rateLimit = require("express-rate-limit");
 const rateLimiter = rateLimit({
@@ -29,33 +31,33 @@ const rateLimiterTransfer = rateLimit({
     }),
 });
 
-// CREATE WALLET
-router.post("/create", rateLimiter, ctrl.create);
+// CREATE WALLET (always for the authenticated caller — user_id is never trusted from the body)
+router.post("/create", authUser, rateLimiter, ctrl.create);
 
-// READ (GET)
-router.get("/getall", ctrl.getAll);
-router.get("/getone/:wallet_id", ctrl.getByIdParam);
+// READ (GET) — admin-only listing / lookup by internal id
+router.get("/getall", authUser, requireAdmin, ctrl.getAll);
+router.get("/getone/:wallet_id", authUser, ctrl.getByIdParam);
 
-// ✅ NEW: get user_name by wallet_id
-router.get("/:wallet_id/user-name", ctrl.getUserNameByWalletId);
+// ✅ get user_name by wallet_id (needed to show recipient name before a transfer)
+router.get("/:wallet_id/user-name", authUser, ctrl.getUserNameByWalletId);
 
-router.get("/:wallet_id", ctrl.getByIdParam);
-router.get("/getbyuser/:user_id", ctrl.getByUserId);
+router.get("/:wallet_id", authUser, ctrl.getByIdParam);
+router.get("/getbyuser/:user_id", authUser, ctrl.getByUserId);
 
-// UPDATE STATUS
-router.put("/:wallet_id/:status", ctrl.updateStatusByParam);
+// UPDATE STATUS — admin only
+router.put("/:wallet_id/:status", authUser, requireAdmin, ctrl.updateStatusByParam);
 
-// DELETE WALLET
-router.delete("/delete/:wallet_id", ctrl.removeByParam);
+// DELETE WALLET — admin only
+router.delete("/delete/:wallet_id", authUser, requireAdmin, ctrl.removeByParam);
 
 // ✅ ADMIN TIP TRANSFER (Send Nu from admin wallet to another wallet)
-router.post("/admin/tip", rateLimiter, ctrl.adminTipTransfer);
+router.post("/admin/tip", authUser, requireAdmin, rateLimiter, ctrl.adminTipTransfer);
 
-// ✅ SET / CREATE T-PIN for a wallet
-router.post("/:wallet_id/t-pin", rateLimiter, ctrl.setTPin);
+// ✅ SET / CREATE T-PIN for a wallet (caller must own the wallet)
+router.post("/:wallet_id/t-pin", authUser, rateLimiter, ctrl.setTPin);
 
-// CHANGE T-PIN (verify old T-PIN first)
-router.patch("/:wallet_id/t-pin", rateLimiter, ctrl.changeTPin);
+// CHANGE T-PIN (verify old T-PIN first, caller must own the wallet)
+router.patch("/:wallet_id/t-pin", authUser, rateLimiter, ctrl.changeTPin);
 
 // ✅ FORGOT T-PIN: request OTP (send mail)
 router.post("/:wallet_id/forgot-tpin", rateLimiter, ctrl.forgotTPinRequest);
@@ -81,8 +83,8 @@ router.post(
   ctrl.forgotTPinVerifySms,
 );
 
-router.post("/transfer", rateLimiterTransfer, ctrl.userTransfer);
+router.post("/transfer", authUser, rateLimiterTransfer, ctrl.userTransfer);
 
-router.get("/:user_id/has-tpin", ctrl.checkTPinByUserId);
+router.get("/:user_id/has-tpin", authUser, ctrl.checkTPinByUserId);
 
 module.exports = router;

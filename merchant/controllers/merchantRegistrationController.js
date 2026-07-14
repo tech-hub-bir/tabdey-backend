@@ -535,10 +535,7 @@ async function listFoodOwners(req, res) {
       include: {
         users: {
           select: {
-            user_id: true,
             user_name: true,
-            email: true,
-            phone: true,
             profile_image: true,
           },
         },
@@ -571,8 +568,6 @@ async function listFoodOwners(req, res) {
       business_id: Number(b.business_id),
       owner_type: b.owner_type,
       business_name: b.business_name,
-      business_license_number: b.business_license_number,
-      license_image: b.license_image,
       latitude: b.latitude,
       longitude: b.longitude,
       address: b.address,
@@ -590,10 +585,7 @@ async function listFoodOwners(req, res) {
       created_at: b.created_at,
       updated_at: b.updated_at,
       user: {
-        user_id: Number(b.users.user_id),
         user_name: b.users.user_name,
-        email: b.users.email,
-        phone: b.users.phone,
         profile_image: b.users.profile_image || null,
       },
       business_types: b.merchant_business_types.map((mbt) => ({
@@ -653,10 +645,7 @@ async function listMartOwners(req, res) {
       include: {
         users: {
           select: {
-            user_id: true,
             user_name: true,
-            email: true,
-            phone: true,
             profile_image: true,
           },
         },
@@ -689,8 +678,6 @@ async function listMartOwners(req, res) {
       business_id: Number(b.business_id),
       owner_type: b.owner_type,
       business_name: b.business_name,
-      business_license_number: b.business_license_number,
-      license_image: b.license_image,
       latitude: b.latitude,
       longitude: b.longitude,
       address: b.address,
@@ -708,10 +695,7 @@ async function listMartOwners(req, res) {
       created_at: b.created_at,
       updated_at: b.updated_at,
       user: {
-        user_id: Number(b.users.user_id),
         user_name: b.users.user_name,
-        email: b.users.email,
-        phone: b.users.phone,
         profile_image: b.users.profile_image || null,
       },
       business_types: b.merchant_business_types.map((mbt) => ({
@@ -749,7 +733,7 @@ async function listFoodOwnersWithCelebration(req, res) {
     const businesses = await prisma.merchant_business_details.findMany({
       where: { owner_type: "food", ...whereCondition },
       include: {
-        users: { select: { user_id: true, user_name: true, phone: true } },
+        users: { select: { user_name: true } },
       },
       orderBy: { created_at: "desc" },
       skip: offset,
@@ -764,7 +748,6 @@ async function listFoodOwnersWithCelebration(req, res) {
       special_celebration_discount_percentage:
         b.special_celebration_discount_percentage,
       address: b.address,
-      phone: b.users?.phone || null,
     }));
 
     return res
@@ -794,7 +777,7 @@ async function listMartOwnersWithCelebration(req, res) {
     const businesses = await prisma.merchant_business_details.findMany({
       where: { owner_type: "mart", ...whereCondition },
       include: {
-        users: { select: { user_id: true, user_name: true, phone: true } },
+        users: { select: { user_name: true } },
       },
       orderBy: { created_at: "desc" },
       skip: offset,
@@ -809,7 +792,6 @@ async function listMartOwnersWithCelebration(req, res) {
       special_celebration_discount_percentage:
         b.special_celebration_discount_percentage,
       address: b.address,
-      phone: b.users?.phone || null,
     }));
 
     return res

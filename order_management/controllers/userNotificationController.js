@@ -4,6 +4,15 @@
 // ✅ No raw SQL
 
 const UserNotificationModel = require("../models/userNotificationModel");
+const { isAdminRole } = require("../middleware/authUser");
+
+function isOwnerOrAdmin(req, row) {
+  if (!row) return true; // let the 404 path handle "not found"
+  return (
+    Number(req.user?.user_id) === Number(row.user_id) ||
+    isAdminRole(req.user?.role)
+  );
+}
 
 /**
  * GET /api/notifications/user/:userId
@@ -57,6 +66,13 @@ async function getOne(req, res) {
       });
     }
 
+    if (!isOwnerOrAdmin(req, row)) {
+      return res.status(403).json({
+        success: false,
+        error: "You do not have access to this notification.",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: row,
@@ -78,6 +94,22 @@ async function getOne(req, res) {
 async function markOneRead(req, res) {
   try {
     const id = Number(req.params.notificationId);
+
+    const existing = await UserNotificationModel.getById(id);
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: "Not found",
+      });
+    }
+
+    if (!isOwnerOrAdmin(req, existing)) {
+      return res.status(403).json({
+        success: false,
+        error: "You do not have access to this notification.",
+      });
+    }
 
     const affected = await UserNotificationModel.markAsRead(id);
 
@@ -133,6 +165,22 @@ async function markAllReadForUser(req, res) {
 async function deleteOne(req, res) {
   try {
     const id = Number(req.params.notificationId);
+
+    const existing = await UserNotificationModel.getById(id);
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: "Not found",
+      });
+    }
+
+    if (!isOwnerOrAdmin(req, existing)) {
+      return res.status(403).json({
+        success: false,
+        error: "You do not have access to this notification.",
+      });
+    }
 
     const affected = await UserNotificationModel.deleteById(id);
 

@@ -11,6 +11,9 @@ const {
   deleteOne,
 } = require("../controllers/userNotificationController");
 
+const authUser = require("../middleware/authUser");
+const { requireSelfOrAdmin } = require("../middleware/authUser");
+
 /* ---------------- rate limit helper ---------------- */
 const makeLimiter = ({ windowMs, max, message }) =>
   rateLimit({
@@ -72,7 +75,13 @@ const validNotificationId = (req, res, next) => {
  * List notifications for a user (with pagination and unread filter)
  * GET /api/notifications/user/:userId?limit=50&offset=0&unreadOnly=true
  */
-router.get("/user/:userId", validUserId, listByUserId);
+router.get(
+  "/user/:userId",
+  authUser,
+  validUserId,
+  requireSelfOrAdmin("userId"),
+  listByUserId,
+);
 
 /**
  * Mark all notifications for a user as read
@@ -80,8 +89,10 @@ router.get("/user/:userId", validUserId, listByUserId);
  */
 router.patch(
   "/user/:userId/read-all",
+  authUser,
   writeLimiter,
   validUserId,
+  requireSelfOrAdmin("userId"),
   markAllReadForUser,
 );
 
@@ -89,7 +100,7 @@ router.patch(
  * Get a single notification by id
  * GET /api/notifications/:notificationId
  */
-router.get("/:notificationId", validNotificationId, getOne);
+router.get("/:notificationId", authUser, validNotificationId, getOne);
 
 /**
  * Mark a single notification as read
@@ -97,6 +108,7 @@ router.get("/:notificationId", validNotificationId, getOne);
  */
 router.patch(
   "/:notificationId/read",
+  authUser,
   writeLimiter,
   validNotificationId,
   markOneRead,
@@ -108,6 +120,7 @@ router.patch(
  */
 router.delete(
   "/:notificationId",
+  authUser,
   deleteLimiter,
   validNotificationId,
   deleteOne,

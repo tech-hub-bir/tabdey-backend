@@ -44,6 +44,29 @@ function mapLocalTimes(row) {
   };
 }
 
+// Never return the T-PIN hash to any client, including the wallet owner.
+function sanitizeWallet(row) {
+  if (!row) return row;
+  const mapped = mapLocalTimes(row);
+  const { t_pin, ...rest } = mapped;
+  return rest;
+}
+
+function isAdminRole(role) {
+  const r = String(role || "").toLowerCase().trim();
+  return r === "admin" || r === "super_admin" || r === "super admin" || r === "finance";
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || !isAdminRole(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: "Admin privileges required.",
+    });
+  }
+  return next();
+}
+
 // TD12345678 -> TD*****78
 function maskWallet(walletId) {
   if (!walletId || walletId.length < 5) return walletId;
@@ -253,13 +276,15 @@ async function safeWalletLogFromReq(req, payload) {
 
 async function create(req, res) {
   try {
-    const { user_id, status = "ACTIVE" } = req.body || {};
-    const uid = Number(user_id);
+    const { status = "ACTIVE" } = req.body || {};
+    // The wallet is always created for the authenticated caller.
+    // A client-supplied user_id must never be trusted (IDOR).
+    const uid = Number(req.user?.user_id);
 
     if (!isValidUserId(uid)) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: "Invalid user_id.",
+        message: "Invalid authenticated user.",
       });
     }
 
@@ -288,14 +313,14 @@ async function create(req, res) {
       return res.status(409).json({
         success: false,
         message: "Wallet already exists for this user.",
-        existing: mapLocalTimes(result.wallet),
+        existing: sanitizeWallet(result.wallet),
       });
     }
 
     return res.json({
       success: true,
       message: "Wallet created.",
-      data: mapLocalTimes(result),
+      data: sanitizeWallet(result),
     });
   } catch (e) {
     console.error("Error creating wallet:", e);
@@ -322,7 +347,7 @@ async function getAll(req, res) {
     return res.json({
       success: true,
       count: rows.length,
-      data: rows.map(mapLocalTimes),
+      data: rows.map(sanitizeWallet),
     });
   } catch (e) {
     console.error("Error listing wallets:", e);
@@ -351,9 +376,19 @@ async function getByIdParam(req, res) {
       });
     }
 
+    const callerId = Number(req.user?.user_id);
+    const isOwner = callerId === Number(wallet.user_id);
+
+    if (!isOwner && !isAdminRole(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this wallet.",
+      });
+    }
+
     return res.json({
       success: true,
-      data: mapLocalTimes(wallet),
+      data: sanitizeWallet(wallet),
     });
   } catch (e) {
     console.error("Error getting wallet:", e);
@@ -379,6 +414,15 @@ async function getByUserId(req, res) {
       });
     }
 
+    const callerId = Number(req.user?.user_id);
+
+    if (callerId !== uid && !isAdminRole(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this wallet.",
+      });
+    }
+
     const wallet = await getWalletByUserId(uid);
 
     if (!wallet) {
@@ -390,7 +434,7 @@ async function getByUserId(req, res) {
 
     return res.json({
       success: true,
-      data: mapLocalTimes(wallet),
+      data: sanitizeWallet(wallet),
     });
   } catch (e) {
     console.error("Error getting wallet by user_id:", e);
@@ -413,6 +457,15 @@ async function checkTPinByUserId(req, res) {
       return res.status(400).json({
         success: false,
         message: "Invalid user_id.",
+      });
+    }
+
+    const callerId = Number(req.user?.user_id);
+
+    if (callerId !== uid && !isAdminRole(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this wallet.",
       });
     }
 
@@ -702,6 +755,13 @@ async function setTPin(req, res) {
       });
     }
 
+    if (Number(req.user?.user_id) !== Number(wallet.user_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this wallet.",
+      });
+    }
+
     if (wallet.t_pin && wallet.t_pin !== "") {
       return res.status(409).json({
         success: false,
@@ -726,7 +786,7 @@ async function setTPin(req, res) {
     return res.json({
       success: true,
       message: "T-PIN set successfully.",
-      data: mapLocalTimes(updated),
+      data: sanitizeWallet(updated),
     });
   } catch (e) {
     console.error("Error setting T-PIN:", e);
@@ -788,6 +848,13 @@ async function changeTPin(req, res) {
       });
     }
 
+    if (Number(req.user?.user_id) !== Number(wallet.user_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this wallet.",
+      });
+    }
+
     if (!wallet.t_pin) {
       return res.status(409).json({
         success: false,
@@ -821,7 +888,7 @@ async function changeTPin(req, res) {
     return res.json({
       success: true,
       message: "T-PIN changed successfully.",
-      data: mapLocalTimes(updated),
+      data: sanitizeWallet(updated),
     });
   } catch (e) {
     console.error("Error changing T-PIN:", e);
@@ -1308,6 +1375,13 @@ async function userTransfer(req, res) {
       });
     }
 
+    if (Number(req.user?.user_id) !== Number(senderWallet.user_id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only transfer funds from your own wallet.",
+      });
+    }
+
     if (senderWallet.status !== "ACTIVE") {
       return res.status(403).json({
         success: false,
@@ -1548,4 +1622,5 @@ module.exports = {
   userTransfer,
   checkTPinByUserId,
   getUserNameByWalletId,
+  requireAdmin,
 };

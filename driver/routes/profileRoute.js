@@ -4,6 +4,8 @@ const router = express.Router();
 const rateLimit = require("express-rate-limit");
 const profileController = require("../controllers/profileController");
 const upload = require("../middleware/upload");
+const authUser = require("../middleware/authUser");
+const { requireSelfOrAdmin } = require("../middleware/authUser");
 
 /* ---------------- rate limit helper ---------------- */
 const makeLimiter = ({ windowMs, max, message }) =>
@@ -42,14 +44,22 @@ const passwordLimiter = makeLimiter({
 });
 
 // Get profile
-router.get("/:user_id", validUserId, profileController.getProfile);
+router.get(
+  "/:user_id",
+  authUser,
+  validUserId,
+  requireSelfOrAdmin,
+  profileController.getProfile,
+);
 
 // Update profile (with optional image)
 // ✅ limiter BEFORE upload middleware
 router.put(
   "/:user_id",
+  authUser,
   updateLimiter,
   validUserId,
+  requireSelfOrAdmin,
   upload.single("profile_image"),
   profileController.updateProfile,
 );
@@ -57,8 +67,10 @@ router.put(
 // Change password
 router.put(
   "/password/:user_id",
+  authUser,
   passwordLimiter,
   validUserId,
+  requireSelfOrAdmin,
   profileController.changePassword,
 );
 

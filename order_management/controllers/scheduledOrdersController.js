@@ -6,6 +6,21 @@
 // ✅ Supports ACCEPTED / REJECTED scheduled order status flow
 
 const { prisma } = require("../lib/prisma");
+const { isAdminRole } = require("../middleware/authUser");
+
+async function callerOwnsBusiness(req, businessId) {
+  if (isAdminRole(req.user?.role)) return true;
+
+  const business = await prisma.merchant_business_details.findFirst({
+    where: {
+      business_id: BigInt(businessId),
+      user_id: Number(req.user?.user_id),
+    },
+    select: { business_id: true },
+  });
+
+  return !!business;
+}
 
 const {
   MAX_PHOTOS: UPLOAD_MAX_PHOTOS,
@@ -454,17 +469,17 @@ exports.scheduleOrder = async (req, res) => {
       }
     }
 
-    const user_id = mergedBody.user_id ?? mergedBody.userId ?? mergedBody.userid;
+    // The order is always scheduled for the authenticated caller —
+    // a client-supplied user_id must never be trusted (IDOR).
+    const userId = Number(req.user?.user_id);
 
     const scheduled_at =
       mergedBody.scheduled_at ?? mergedBody.scheduledAt ?? mergedBody.scheduled;
 
-    const userId = asNumber(user_id);
-
     if (!Number.isFinite(userId) || userId <= 0) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: "user_id is required and must be a number.",
+        message: "Invalid authenticated user.",
       });
     }
 
@@ -763,6 +778,13 @@ exports.listScheduledOrdersByBusiness = async (req, res) => {
       });
     }
 
+    if (!(await callerOwnsBusiness(req, businessId))) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this business's orders.",
+      });
+    }
+
     const list = await getScheduledOrdersByBusiness(businessId);
 
     if (!list.length) {
@@ -920,6 +942,18 @@ exports.updateScheduledOrderStatus = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: "Scheduled order data is corrupted.",
+      });
+    }
+
+    const orderBusinessId = data?.order_payload?.business_id ?? data?.business_id;
+
+    if (
+      orderBusinessId != null &&
+      !(await callerOwnsBusiness(req, orderBusinessId))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have access to this scheduled order.",
       });
     }
 

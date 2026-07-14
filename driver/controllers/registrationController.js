@@ -1,6 +1,7 @@
 const { prisma } = require("../lib/prisma.js");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const redis = require("../models/redisClient");
 
 // Helper function to convert BigInt safely
 function toNumber(value) {
@@ -238,6 +239,24 @@ const registerUser = async (req, res) => {
       return errorResponse(res, 400, "Device ID is required for registration.");
     }
 
+    /*
+     * Server-side OTP gate.
+     *
+     * The client must have already completed phone OTP verification
+     * (POST /driver/api/sms-otp/verify-otp-sms) which sets this Redis flag.
+     * The flag is never trusted from client-supplied fields and is
+     * consumed (deleted) below so it cannot be replayed.
+     */
+    const verifiedSmsFlag = await redis.get(`verified_sms:${normalizedPhone}`);
+
+    if (!verifiedSmsFlag) {
+      return errorResponse(
+        res,
+        401,
+        "Phone number not verified. Please verify the OTP sent to your phone before registering.",
+      );
+    }
+
     await prisma.$transaction(async (prismaTx) => {
       const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -408,6 +427,9 @@ const registerUser = async (req, res) => {
         });
       }
     });
+
+    // OTP flag is single-use — consume it now that the account exists.
+    await redis.del(`verified_sms:${normalizedPhone}`);
 
     const registrationMessages = {
       user: "User registration successful",
@@ -648,20 +670,16 @@ const loginUser = async (req, res) => {
 
     const picked = candidates?.[0] || null;
 
+    // Generic message shared by "no such account" and "wrong password" so a
+    // caller cannot enumerate which phone/email numbers have registered accounts.
+    const invalidCredentialsMessage = "Incorrect email/phone or password.";
+
     if (!picked) {
-      return errorResponse(
-        res,
-        404,
-        `No ${role} account was found with this email or phone number.`,
-      );
+      return errorResponse(res, 401, invalidCredentialsMessage);
     }
 
     if (!picked.password_hash) {
-      return errorResponse(
-        res,
-        401,
-        "This account does not have valid login credentials.",
-      );
+      return errorResponse(res, 401, invalidCredentialsMessage);
     }
 
     /*
@@ -674,11 +692,7 @@ const loginUser = async (req, res) => {
     );
 
     if (!passwordMatches) {
-      return errorResponse(
-        res,
-        401,
-        `Incorrect password for this ${role} account.`,
-      );
+      return errorResponse(res, 401, invalidCredentialsMessage);
     }
 
     const user = await prisma.users.findUnique({

@@ -10,8 +10,13 @@ import {
   getPassengerRidesGroupedByStatus,
   getDriverRidesGroupedByStatus,
 } from "../controllers/scheduledRides.controller.js";
+import requireAuth from "../middleware/requireAuth.js";
 
 const router = express.Router();
+
+// All scheduled-ride endpoints resolve the acting driver/passenger from the
+// authenticated token (see controller) — never trust it must be authenticated.
+router.use(requireAuth);
 
 /* ================= DRIVER ================= */
 router.get("/driver/list", listScheduledRidesForDriver);

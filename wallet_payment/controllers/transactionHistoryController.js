@@ -5,7 +5,9 @@ const {
   listAll,
   isValidWalletId,
 } = require("../models/transactionHistoryModel");
+const { getWallet } = require("../models/walletModel");
 const { toThimphuString } = require("../utils/time");
+const { isAdminRole } = require("../middleware/authUser");
 
 // One mapping function for BOTH endpoints
 function mapRowForWallet(row, wallet_id) {
@@ -33,6 +35,22 @@ async function getByWallet(req, res) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid wallet_id." });
+    }
+
+    const wallet = await getWallet({ key: wallet_id });
+    if (!wallet) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Wallet not found." });
+    }
+
+    if (
+      Number(req.user?.user_id) !== Number(wallet.user_id) &&
+      !isAdminRole(req.user?.role)
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "You do not have access to this wallet." });
     }
 
     const { limit, cursor, start, end, direction, journal, q } = req.query;
@@ -67,6 +85,15 @@ async function getByUser(req, res) {
         .status(400)
         .json({ success: false, message: "Invalid user_id." });
 
+    if (
+      Number(req.user?.user_id) !== Number(user_id) &&
+      !isAdminRole(req.user?.role)
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "You do not have access to this wallet." });
+    }
+
     const { limit, cursor, start, end, direction, journal, q } = req.query;
     const { rows, next_cursor, wallet_id } = await listByUser(user_id, {
       limit,
@@ -98,6 +125,12 @@ async function getByUser(req, res) {
 /* ---------- GET all (admin/global) ---------- */
 async function getAll(req, res) {
   try {
+    if (!isAdminRole(req.user?.role)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Admin privileges required." });
+    }
+
     const { limit, cursor, start, end, journal, q } = req.query;
     const { rows, next_cursor } = await listAll({
       limit,

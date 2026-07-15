@@ -120,10 +120,12 @@ async function autoReleaseExpiredScheduled(conn) {
 export async function listScheduledRidesForDriver(req, res) {
   let conn;
   try {
-    const { user_id, driver_id, days } = req.query || {};
+    const { days } = req.query || {};
     conn = await mysqlPool.getConnection();
 
-    const myDriverId = await resolveDriverId(conn, { user_id, driver_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id (IDOR).
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       return res.status(400).json({
         ok: false,
@@ -227,7 +229,6 @@ export async function reserveScheduledRide(req, res) {
   let conn;
   try {
     const rideId = Number(req.params.rideId);
-    const { user_id, driver_id } = req.body || {};
 
     if (!Number.isFinite(rideId) || rideId <= 0) {
       return res.status(400).json({ ok: false, error: "Valid rideId required" });
@@ -236,7 +237,9 @@ export async function reserveScheduledRide(req, res) {
     conn = await mysqlPool.getConnection();
     await conn.beginTransaction();
 
-    const myDriverId = await resolveDriverId(conn, { user_id, driver_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id (this used to let anyone reserve a ride as any driver).
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       await conn.rollback();
       return res.status(400).json({ ok: false, error: "Valid user_id required" });
@@ -320,12 +323,13 @@ export async function reconfirmScheduledRide(req, res) {
   let conn;
   try {
     const rideId = Number(req.params.rideId);
-    const { user_id, driver_id } = req.body || {};
 
     conn = await mysqlPool.getConnection();
     await conn.beginTransaction();
 
-    const myDriverId = await resolveDriverId(conn, { user_id, driver_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id.
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       await conn.rollback();
       return res.status(400).json({ ok: false, error: "Invalid driver" });
@@ -385,12 +389,13 @@ export async function releaseScheduledRide(req, res) {
   let conn;
   try {
     const rideId = Number(req.params.rideId);
-    const { user_id, driver_id } = req.body || {};
 
     conn = await mysqlPool.getConnection();
     await conn.beginTransaction();
 
-    const myDriverId = await resolveDriverId(conn, { user_id, driver_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id.
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       await conn.rollback();
       return res.status(400).json({ ok: false, error: "Invalid driver" });
@@ -430,11 +435,15 @@ export async function releaseScheduledRide(req, res) {
 export async function listScheduledRidesForPassenger(req, res) {
   let conn;
   try {
-    const { passenger_id, user_id, days } = req.query || {};
+    const { days } = req.query || {};
 
     conn = await mysqlPool.getConnection();
 
-    const myPassengerId = await resolvePassengerId(conn, { passenger_id, user_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // passenger_id/user_id (IDOR).
+    const myPassengerId = await resolvePassengerId(conn, {
+      user_id: req.user.user_id,
+    });
     if (!myPassengerId) {
       return res.status(400).json({
         ok: false,
@@ -535,11 +544,13 @@ export async function listScheduledRidesForPassenger(req, res) {
 export async function listMyScheduledRidesForDriver(req, res) {
   let conn;
   try {
-    const { user_id, driver_id, days } = req.query || {};
+    const { days } = req.query || {};
 
     conn = await mysqlPool.getConnection();
 
-    const myDriverId = await resolveDriverId(conn, { user_id, driver_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id (IDOR).
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       return res.status(400).json({
         ok: false,
@@ -644,11 +655,15 @@ export async function listMyScheduledRidesForDriver(req, res) {
 export async function getPassengerRidesGroupedByStatus(req, res) {
   let conn;
   try {
-    const { passenger_id, user_id, booking_type, limit } = req.query || {};
+    const { booking_type, limit } = req.query || {};
 
     conn = await mysqlPool.getConnection();
 
-    const myPassengerId = await resolvePassengerId(conn, { passenger_id, user_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // passenger_id/user_id (this was the reported IDOR).
+    const myPassengerId = await resolvePassengerId(conn, {
+      user_id: req.user.user_id,
+    });
     if (!myPassengerId) {
       return res
         .status(400)
@@ -771,11 +786,13 @@ export async function getPassengerRidesGroupedByStatus(req, res) {
 export async function getDriverRidesGroupedByStatus(req, res) {
   let conn;
   try {
-    const { driver_id, user_id, booking_type, limit } = req.query || {};
+    const { booking_type, limit } = req.query || {};
 
     conn = await mysqlPool.getConnection();
 
-    const myDriverId = await resolveDriverId(conn, { driver_id, user_id });
+    // Always resolve from the authenticated token — never a client-supplied
+    // driver_id/user_id (IDOR).
+    const myDriverId = await resolveDriverId(conn, { user_id: req.user.user_id });
     if (!myDriverId) {
       return res.status(400).json({ ok: false, error: "Valid driver_id (or user_id) required" });
     }

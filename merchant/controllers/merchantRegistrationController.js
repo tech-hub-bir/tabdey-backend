@@ -629,8 +629,8 @@ async function listFoodOwners(req, res) {
       created_at: b.created_at,
       updated_at: b.updated_at,
       user: {
-        user_name: b.users.user_name,
-        profile_image: b.users.profile_image || null,
+        user_name: b.users?.user_name ?? null,
+        profile_image: b.users?.profile_image || null,
       },
       business_types: b.merchant_business_types.map((mbt) => ({
         business_type_id: Number(mbt.business_types.id),
@@ -739,8 +739,8 @@ async function listMartOwners(req, res) {
       created_at: b.created_at,
       updated_at: b.updated_at,
       user: {
-        user_name: b.users.user_name,
-        profile_image: b.users.profile_image || null,
+        user_name: b.users?.user_name ?? null,
+        profile_image: b.users?.profile_image || null,
       },
       business_types: b.merchant_business_types.map((mbt) => ({
         business_type_id: Number(mbt.business_types.id),

@@ -81,6 +81,13 @@ async function registerMerchant(req, res) {
       : fromBodyToStoredPath(b.bank_qr_code_image);
 
     const normalizedPhone = normalizeBhutanPhone(b.phone);
+    // smsOtpController.js stores/reads "verified_sms:{phone}" using a
+    // plus-less digit format (e.g. "975XXXXXXXX"), while normalizeBhutanPhone
+    // keeps the "+" for storage/display. Strip it here so the OTP lookup key
+    // actually matches what verify-otp-sms wrote.
+    const otpPhoneKey = normalizedPhone
+      ? normalizedPhone.replace(/^\+/, "")
+      : null;
     const normalizedEmailForOtp = String(b.email || "").trim().toLowerCase();
 
     /*
@@ -97,7 +104,7 @@ async function registerMerchant(req, res) {
     const redis = getRedis();
 
     const [verifiedSmsFlag, verifiedEmailFlag] = await Promise.all([
-      redis.get(`verified_sms:${normalizedPhone}`),
+      otpPhoneKey ? redis.get(`verified_sms:${otpPhoneKey}`) : null,
       normalizedEmailForOtp
         ? redis.get(`verified:${normalizedEmailForOtp}`)
         : null,
@@ -155,7 +162,7 @@ async function registerMerchant(req, res) {
     // OTP flags are single-use — consume whichever one was set now that the
     // account exists.
     await Promise.all([
-      redis.del(`verified_sms:${normalizedPhone}`),
+      otpPhoneKey ? redis.del(`verified_sms:${otpPhoneKey}`) : null,
       normalizedEmailForOtp
         ? redis.del(`verified:${normalizedEmailForOtp}`)
         : null,

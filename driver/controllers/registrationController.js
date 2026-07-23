@@ -247,7 +247,16 @@ const registerUser = async (req, res) => {
      * The flag is never trusted from client-supplied fields and is
      * consumed (deleted) below so it cannot be replayed.
      */
-    const verifiedSmsFlag = await redis.get(`verified_sms:${normalizedPhone}`);
+    // smsOtpController.js stores/reads "verified_sms:{phone}" using a
+    // plus-less digit format (e.g. "975XXXXXXXX"), while normalizeBhutanPhone
+    // keeps the "+" for storage/display. Strip it here so the OTP lookup key
+    // actually matches what verify-otp-sms wrote.
+    const otpPhoneKey = normalizedPhone
+      ? normalizedPhone.replace(/^\+/, "")
+      : null;
+    const verifiedSmsFlag = otpPhoneKey
+      ? await redis.get(`verified_sms:${otpPhoneKey}`)
+      : null;
 
     if (!verifiedSmsFlag) {
       return errorResponse(
@@ -429,7 +438,7 @@ const registerUser = async (req, res) => {
     });
 
     // OTP flag is single-use — consume it now that the account exists.
-    await redis.del(`verified_sms:${normalizedPhone}`);
+    if (otpPhoneKey) await redis.del(`verified_sms:${otpPhoneKey}`);
 
     const registrationMessages = {
       user: "User registration successful",

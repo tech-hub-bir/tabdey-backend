@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { prisma } = require("../lib/prisma");
 const cache = require("../services/cacheService");
-const { getRedis } = require("../config/redis");
+const otpRedis = require("../config/otpRedis");
 
 const {
   registerMerchantModel,
@@ -98,15 +98,18 @@ async function registerMerchant(req, res) {
      *            -> sets Redis "verified_sms:{phone}"
      *   - Email: POST /driver/api/auth/send-otp + verify-otp
      *            -> sets Redis "verified:{email}"
-     * Accept either flag (never trusted from client fields), and consume
-     * whichever one was actually set so it cannot be replayed.
+     * Both flags are written by the driver service into Upstash (see
+     * driver/models/redisClient.js), which is a different physical Redis
+     * than merchant's own config/redis.js (self-hosted, used for caching).
+     * otpRedis talks to that same Upstash instance so these lookups can
+     * actually see what driver wrote. Accept either flag (never trusted from
+     * client fields), and consume whichever one was actually set so it
+     * cannot be replayed.
      */
-    const redis = getRedis();
-
     const [verifiedSmsFlag, verifiedEmailFlag] = await Promise.all([
-      otpPhoneKey ? redis.get(`verified_sms:${otpPhoneKey}`) : null,
+      otpPhoneKey ? otpRedis.get(`verified_sms:${otpPhoneKey}`) : null,
       normalizedEmailForOtp
-        ? redis.get(`verified:${normalizedEmailForOtp}`)
+        ? otpRedis.get(`verified:${normalizedEmailForOtp}`)
         : null,
     ]);
 
@@ -162,9 +165,9 @@ async function registerMerchant(req, res) {
     // OTP flags are single-use — consume whichever one was set now that the
     // account exists.
     await Promise.all([
-      otpPhoneKey ? redis.del(`verified_sms:${otpPhoneKey}`) : null,
+      otpPhoneKey ? otpRedis.del(`verified_sms:${otpPhoneKey}`) : null,
       normalizedEmailForOtp
-        ? redis.del(`verified:${normalizedEmailForOtp}`)
+        ? otpRedis.del(`verified:${normalizedEmailForOtp}`)
         : null,
     ]);
 
